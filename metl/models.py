@@ -9,7 +9,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 
-import relative_attention as ra
+import metl.relative_attention as ra
 
 
 def reset_parameters_helper(m: nn.Module):

@@ -3,4 +3,4 @@ numpy
 networkx
 scipy
 biopandas
-pytorch
+torch

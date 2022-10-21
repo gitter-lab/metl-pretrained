@@ -1,8 +1,8 @@
 import torch
 import torch.hub
 
-import models
-from encode import DataEncoder, Encoding
+import metl.models as models
+from metl.encode import DataEncoder, Encoding
 
 
 def download_checkpoint(model_name):

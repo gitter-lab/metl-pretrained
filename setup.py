@@ -6,5 +6,5 @@ setup(name='metl-pretrained',
       author='Sam Gelman',
       author_email='sgelman2@wisc.edu',
       license='MIT',
-      packages=['main'],
-      install_requires=['pytorch', 'numpy', 'scipy', 'biopandas'])
+      packages=['metl'],
+      install_requires=['torch>=1.11.0', 'numpy>=1.23.2', 'scipy>=1.9.1', 'biopandas>=0.2.7'])

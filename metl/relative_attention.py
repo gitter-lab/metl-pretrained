@@ -9,17 +9,17 @@
 import copy
 from os.path import basename, dirname, join, isfile
 from typing import Optional, Union
+import time
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 from torch.nn import Linear, Dropout, LayerNorm
-import time
-
-import structure
 import networkx as nx
-import models
+
+import metl.structure as structure
+import metl.models as models
 
 
 class RelativePosition3D(nn.Module):
