@@ -1,0 +1,6 @@
+setuptools
+numpy
+networkx
+scipy
+biopandas
+pytorch
