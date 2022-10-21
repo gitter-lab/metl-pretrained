@@ -3,9 +3,13 @@ Pretrained METL models with minimal dependencies
 
 
 # Getting started
-1. Clone this repository
-2. Install the package with `pip install metl-pretrained`
-3. Use `model, data_encoder = metl.kThmNaxC()` to load the pre-trained model
+1. Create a conda environment (or use existing one): `conda create --name metl-test python=3`
+2. Activate conda environment `conda activate metl-test`
+3. Clone this repository
+4. Navigate to the cloned repository `cd metl-pretrained`
+5. Install the package with `pip install .`
+6. Import the package in your script with `import metl` (example below)
+7. Use `model, data_encoder = metl.kThmNaxC()` to load the pre-trained model (example below)
 
 # Full example
 
