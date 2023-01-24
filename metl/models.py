@@ -166,33 +166,52 @@ class FCBlock(nn.Module):
                  in_features: int,
                  num_hidden_nodes: int = 64,
                  use_batchnorm: bool = False,
+                 use_layernorm: bool = False,
+                 norm_before_activation: bool = False,
                  use_dropout: bool = False,
                  dropout_rate: float = 0.2,
                  activation: str = "relu"):
 
         super().__init__()
 
+        if use_batchnorm and use_layernorm:
+            raise ValueError("Only one of use_batchnorm or use_layernorm can be set to True")
+
         self.use_batchnorm = use_batchnorm
         self.use_dropout = use_dropout
+        self.use_layernorm = use_layernorm
+        self.norm_before_activation = norm_before_activation
 
         self.fc = nn.Linear(in_features=in_features, out_features=num_hidden_nodes)
+
         self.activation = get_activation_fn(activation, functional=False)
 
         if use_batchnorm:
-            self.batchnorm = nn.BatchNorm1d(num_hidden_nodes)
+            self.norm = nn.BatchNorm1d(num_hidden_nodes)
+
+        if use_layernorm:
+            self.norm = nn.LayerNorm(num_hidden_nodes)
 
         if use_dropout:
             self.dropout = nn.Dropout(p=dropout_rate)
 
     def forward(self, x, **kwargs):
         x = self.fc(x)
+
+        # norm can be before or after activation, using flag
+        if (self.use_batchnorm or self.use_layernorm) and self.norm_before_activation:
+            x = self.norm(x)
+
         x = self.activation(x)
+
         # batchnorm being applied after activation, there is some discussion on this online
-        if self.use_batchnorm:
-            x = self.batchnorm(x)
-        # dropout being applied after batchnorm, there is some discussion on this online
+        if (self.use_batchnorm or self.use_layernorm) and not self.norm_before_activation:
+            x = self.norm(x)
+
+        # dropout being applied last
         if self.use_dropout:
             x = self.dropout(x)
+
         return x
 
 
@@ -286,6 +305,7 @@ class AttnModel(nn.Module):
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
+
         parser.add_argument('--pos_encoding', type=str, default="absolute",
                             choices=["none", "absolute", "relative", "relative_3D"],
                             help="what type of positional encoding to use")
@@ -300,16 +320,22 @@ class AttnModel(nn.Module):
         parser.add_argument('--num_hidden', type=int, default=64)
         parser.add_argument('--num_enc_layers', type=int, default=2)
         parser.add_argument('--enc_layer_dropout', type=float, default=0.1)
+        parser.add_argument('--use_final_encoder_norm', action="store_true", default=False)
+
         parser.add_argument('--global_average_pooling', action="store_true", default=False)
         parser.add_argument('--cls_pooling', action="store_true", default=False)
+
         parser.add_argument('--use_task_specific_layers', action="store_true", default=False,
                             help="exclusive with use_final_hidden_layer; takes priority over use_final_hidden_layer"
                                  " if both flags are set")
         parser.add_argument('--task_specific_hidden_nodes', type=int, default=64)
         parser.add_argument('--use_final_hidden_layer', action="store_true", default=False)
         parser.add_argument('--final_hidden_size', type=int, default=64)
+        parser.add_argument('--use_final_hidden_layer_norm', action="store_true", default=False)
+        parser.add_argument('--final_hidden_layer_norm_before_activation', action="store_true", default=False)
         parser.add_argument('--use_final_hidden_layer_dropout', action="store_true", default=False)
         parser.add_argument('--final_hidden_layer_dropout_rate', type=float, default=0.2)
+
         parser.add_argument('--activation', type=str, default="relu",
                             help="activation function used for all activations in the network")
         return parser
@@ -330,6 +356,7 @@ class AttnModel(nn.Module):
                  num_hidden: int = 64,
                  num_enc_layers: int = 2,
                  enc_layer_dropout: float = 0.1,
+                 use_final_encoder_norm: bool = False,
                  # pooling to fixed-length representation
                  global_average_pooling: bool = True,
                  cls_pooling: bool = False,
@@ -338,6 +365,8 @@ class AttnModel(nn.Module):
                  task_specific_hidden_nodes: int = 64,
                  use_final_hidden_layer: bool = False,
                  final_hidden_size: int = 64,
+                 use_final_hidden_layer_norm: bool = False,
+                 final_hidden_layer_norm_before_activation: bool = False,
                  use_final_hidden_layer_dropout: bool = False,
                  final_hidden_layer_dropout_rate: float = 0.2,
                  # activation function
@@ -370,7 +399,17 @@ class AttnModel(nn.Module):
                                                              norm_first=True,
                                                              batch_first=True)
 
-            layers["tr_encoder"] = TransformerEncoderWrapper(encoder_layer=encoder_layer, num_layers=num_enc_layers)
+            # layer norm that is used after the transformer encoder layers
+            # if the norm_first is False, this is *redundant* and not needed
+            # but if norm_first is True, this can be used to normalize outputs from
+            # the transformer encoder before inputting to the final fully connected layer
+            encoder_norm = None
+            if use_final_encoder_norm:
+                encoder_norm = nn.LayerNorm(embedding_len)
+
+            layers["tr_encoder"] = TransformerEncoderWrapper(encoder_layer=encoder_layer,
+                                                             num_layers=num_enc_layers,
+                                                             norm=encoder_norm)
 
         # transformer encoder layer for relative position encoding
         elif pos_encoding in ["relative", "relative_3D"]:
@@ -385,8 +424,13 @@ class AttnModel(nn.Module):
                                                                         activation=get_activation_fn(activation),
                                                                         norm_first=True)
 
+            encoder_norm = None
+            if use_final_encoder_norm:
+                encoder_norm = nn.LayerNorm(embedding_len)
+
             layers["tr_encoder"] = ra.RelativeTransformerEncoder(encoder_layer=relative_encoder_layer,
-                                                                 num_layers=num_enc_layers)
+                                                                 num_layers=num_enc_layers,
+                                                                 norm=encoder_norm)
 
         # GLOBAL AVERAGE POOLING OR CLS TOKEN
         # set up the layers and output shapes (i.e. input shapes for the pred layer)
@@ -415,9 +459,12 @@ class AttnModel(nn.Module):
             layers["fc1"] = FCBlock(in_features=pred_layer_input_features,
                                     num_hidden_nodes=final_hidden_size,
                                     use_batchnorm=False,
+                                    use_layernorm=use_final_hidden_layer_norm,
+                                    norm_before_activation=final_hidden_layer_norm_before_activation,
                                     use_dropout=use_final_hidden_layer_dropout,
                                     dropout_rate=final_hidden_layer_dropout_rate,
                                     activation=activation)
+
             layers["prediction"] = nn.Linear(in_features=final_hidden_size, out_features=num_tasks)
         else:
             layers["prediction"] = nn.Linear(in_features=pred_layer_input_features, out_features=num_tasks)
@@ -454,13 +501,20 @@ class ConvBlock(nn.Module):
                  dilation: int = 1,
                  padding: str = "same",
                  use_batchnorm: bool = False,
+                 use_layernorm: bool = False,
+                 norm_before_activation: bool = False,
                  use_dropout: bool = False,
                  dropout_rate: float = 0.2,
                  activation: str = "relu"):
 
         super().__init__()
 
+        if use_batchnorm and use_layernorm:
+            raise ValueError("Only one of use_batchnorm or use_layernorm can be set to True")
+
         self.use_batchnorm = use_batchnorm
+        self.use_layernorm = use_layernorm
+        self.norm_before_activation = norm_before_activation
         self.use_dropout = use_dropout
 
         self.conv = nn.Conv1d(in_channels=in_channels,
@@ -472,20 +526,35 @@ class ConvBlock(nn.Module):
         self.activation = get_activation_fn(activation, functional=False)
 
         if use_batchnorm:
-            self.batchnorm = nn.BatchNorm1d(out_channels)
+            self.norm = nn.BatchNorm1d(out_channels)
+
+        if use_layernorm:
+            self.norm = nn.LayerNorm(out_channels)
 
         if use_dropout:
             self.dropout = nn.Dropout(p=dropout_rate)
 
     def forward(self, x, **kwargs):
         x = self.conv(x)
+
+        # norm can be before or after activation, using flag
+        if self.use_batchnorm and self.norm_before_activation:
+            x = self.norm(x)
+        elif self.use_layernorm and self.norm_before_activation:
+            x = self.norm(x.transpose(1, 2)).transpose(1, 2)
+
         x = self.activation(x)
+
         # batchnorm being applied after activation, there is some discussion on this online
-        if self.use_batchnorm:
-            x = self.batchnorm(x)
+        if self.use_batchnorm and not self.norm_before_activation:
+            x = self.norm(x)
+        elif self.use_layernorm and not self.norm_before_activation:
+            x = self.norm(x.transpose(1, 2)).transpose(1, 2)
+
         # dropout being applied after batchnorm, there is some discussion on this online
         if self.use_dropout:
             x = self.dropout(x)
+
         return x
 
 
@@ -503,17 +572,24 @@ class ConvModel2(nn.Module):
         parser.add_argument('--out_channels', type=int, nargs="+", default=[128])
         parser.add_argument('--dilations', type=int, nargs="+", default=[1])
         parser.add_argument('--padding', type=str, default="valid", choices=["valid", "same"])
+        parser.add_argument('--use_conv_layer_norm', action="store_true", default=False)
+        parser.add_argument('--conv_layer_norm_before_activation', action="store_true", default=False)
+        parser.add_argument('--use_conv_layer_dropout', action="store_true", default=False)
+        parser.add_argument('--conv_layer_dropout_rate', type=float, default=0.2)
 
         parser.add_argument('--global_average_pooling', action="store_true", default=False)
 
         parser.add_argument('--use_task_specific_layers', action="store_true", default=False)
         parser.add_argument('--task_specific_hidden_nodes', type=int, default=64)
-        parser.add_argument('--use_final_hidden_layer', action="store_true",
-                            help="whether to use a final hidden layer")
-        parser.add_argument('--final_hidden_size', type=int, default=128,
-                            help="number of nodes in the final hidden layer")
+        parser.add_argument('--use_final_hidden_layer', action="store_true", default=False)
+        parser.add_argument('--final_hidden_size', type=int, default=64)
+        parser.add_argument('--use_final_hidden_layer_norm', action="store_true", default=False)
+        parser.add_argument('--final_hidden_layer_norm_before_activation', action="store_true", default=False)
         parser.add_argument('--use_final_hidden_layer_dropout', action="store_true", default=False)
         parser.add_argument('--final_hidden_layer_dropout_rate', type=float, default=0.2)
+
+        parser.add_argument('--activation', type=str, default="relu",
+                            help="activation function used for all activations in the network")
 
         return parser
 
@@ -531,15 +607,23 @@ class ConvModel2(nn.Module):
                  out_channels: List[int] = (128,),
                  dilations: List[int] = (1,),
                  padding: str = "valid",
+                 use_conv_layer_norm: bool = False,
+                 conv_layer_norm_before_activation: bool = False,
+                 use_conv_layer_dropout: bool = False,
+                 conv_layer_dropout_rate: float = 0.2,
                  # pooling
                  global_average_pooling: bool = True,
                  # prediction layers
                  use_task_specific_layers: bool = False,
                  task_specific_hidden_nodes: int = 64,
-                 use_final_hidden_layer: bool = True,
-                 final_hidden_size: int = 128,
+                 use_final_hidden_layer: bool = False,
+                 final_hidden_size: int = 64,
+                 use_final_hidden_layer_norm: bool = False,
+                 final_hidden_layer_norm_before_activation: bool = False,
                  use_final_hidden_layer_dropout: bool = False,
                  final_hidden_layer_dropout_rate: float = 0.2,
+                 # activation function
+                 activation: str = "relu",
                  *args, **kwargs):
 
         super(ConvModel2, self).__init__()
@@ -553,7 +637,6 @@ class ConvModel2(nn.Module):
 
         # transpose the input to match PyTorch's expected format
         layers["transpose"] = Transpose(dims=(1, 2))
-
 
         # build up the convolutional layers
         for layer_num in range(num_conv_layers):
@@ -573,7 +656,11 @@ class ConvModel2(nn.Module):
                                                    dilation=dilations[layer_num],
                                                    padding=padding,
                                                    use_batchnorm=False,
-                                                   use_dropout=False)
+                                                   use_layernorm=use_conv_layer_norm,
+                                                   norm_before_activation=conv_layer_norm_before_activation,
+                                                   use_dropout=use_conv_layer_dropout,
+                                                   dropout_rate=conv_layer_dropout_rate,
+                                                   activation=activation)
 
         # handle transition from convolutional layers to fully connected layer
         # either use global average pooling or flatten
@@ -606,15 +693,19 @@ class ConvModel2(nn.Module):
         if use_task_specific_layers:
             layers["prediction"] = TaskSpecificPredictionLayers(num_tasks=num_tasks,
                                                                 in_features=pred_layer_input_features,
-                                                                num_hidden_nodes=task_specific_hidden_nodes)
+                                                                num_hidden_nodes=task_specific_hidden_nodes,
+                                                                activation=activation)
 
         # final hidden layer (with potential additional dropout)
         elif use_final_hidden_layer:
             layers["fc1"] = FCBlock(in_features=pred_layer_input_features,
                                     num_hidden_nodes=final_hidden_size,
                                     use_batchnorm=False,
+                                    use_layernorm=use_final_hidden_layer_norm,
+                                    norm_before_activation=final_hidden_layer_norm_before_activation,
                                     use_dropout=use_final_hidden_layer_dropout,
-                                    dropout_rate=final_hidden_layer_dropout_rate)
+                                    dropout_rate=final_hidden_layer_dropout_rate,
+                                    activation=activation)
             layers["prediction"] = nn.Linear(in_features=final_hidden_size, out_features=num_tasks)
 
         else:
@@ -732,6 +823,8 @@ class FCModel(nn.Module):
         parser.add_argument('--num_layers', type=int, default=1)
         parser.add_argument('--num_hidden', nargs="+", type=int, default=[128])
         parser.add_argument('--use_batchnorm', action="store_true", default=False)
+        parser.add_argument('--use_layernorm', action="store_true", default=False)
+        parser.add_argument('--norm_before_activation', action="store_true", default=False)
         parser.add_argument('--use_dropout', action="store_true", default=False)
         parser.add_argument('--dropout_rate', type=float, default=0.2)
         return parser
@@ -742,8 +835,11 @@ class FCModel(nn.Module):
                  num_layers: int = 1,
                  num_hidden: List[int] = (128,),
                  use_batchnorm: bool = False,
+                 use_layernorm: bool = False,
+                 norm_before_activation: bool = False,
                  use_dropout: bool = False,
                  dropout_rate: float = 0.2,
+                 activation: str = "relu",
                  *args, **kwargs):
         super().__init__()
 
@@ -762,8 +858,11 @@ class FCModel(nn.Module):
             layers["fc{}".format(layer_num)] = FCBlock(in_features=in_features,
                                                        num_hidden_nodes=num_hidden[layer_num],
                                                        use_batchnorm=use_batchnorm,
+                                                       use_layernorm=use_layernorm,
+                                                       norm_before_activation=norm_before_activation,
                                                        use_dropout=use_dropout,
-                                                       dropout_rate=dropout_rate)
+                                                       dropout_rate=dropout_rate,
+                                                       activation=activation)
 
         # finally, the linear output layer
         in_features = num_hidden[-1] if num_layers > 0 else seq_encoding_len
