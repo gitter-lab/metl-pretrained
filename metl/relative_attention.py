@@ -9,17 +9,17 @@
 import copy
 from os.path import basename, dirname, join, isfile
 from typing import Optional, Union
-import time
 
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from torch import Tensor
 from torch.nn import Linear, Dropout, LayerNorm
-import networkx as nx
+import time
 
-import metl.structure as structure
-import metl.models as models
+import structure
+import networkx as nx
+import models
 
 
 class RelativePosition3D(nn.Module):
@@ -45,8 +45,8 @@ class RelativePosition3D(nn.Module):
         self.contact_threshold = contact_threshold
         self.default_pdb_dir = default_pdb_dir
 
-        # set up pdb_fns that were passed in on init (can also be set up during runtime in forward())
-        self._init_pdbs(pdb_fns)
+        # dummy buffer for getting correct device for on-the-fly bucket matrix generation
+        self.register_buffer("dummy_buffer", torch.empty(0), persistent=False)
 
         # for 3D-based positions, the number of embeddings is generally the number of buckets
         # for contact map-based distances, that is clipping_threshold + 1
@@ -55,36 +55,79 @@ class RelativePosition3D(nn.Module):
         # this is the embedding lookup table E_r
         self.embeddings_table = nn.Embedding(num_embeddings, embedding_len)
 
+        # set up pdb_fns that were passed in on init (can also be set up during runtime in forward())
+        # todo: i'm using a hacky workaround to move the bucket_mtxs to the correct device
+        #   i tried to make it more efficient by registering bucket matrices as buffers, but i was
+        #   having problems with DDP syncing the buffers across processes
+        self.bucket_mtxs = {}
+        self.bucket_mtxs_device = self.dummy_buffer.device
+        self._init_pdbs(pdb_fns)
+
     def forward(self, pdb_fn):
         # compute matrix R by grabbing the embeddings from the embeddings lookup table
         embeddings = self.embeddings_table(self._get_bucket_mtx(pdb_fn))
         return embeddings
 
+    # def _get_bucket_mtx(self, pdb_fn):
+    #     """ retrieve a bucket matrix given the pdb_fn.
+    #         if the pdb_fn was provided at init or has already been computed, then the bucket matrix will be
+    #         retrieved from the object buffer. if the bucket matrix has not been computed yet, it will be here """
+    #     pdb_attr = self._pdb_key(pdb_fn)
+    #     if hasattr(self, pdb_attr):
+    #         return getattr(self, pdb_attr)
+    #     else:
+    #         # encountering a new PDB at runtime... process it
+    #         # todo: if there's a new PDB at runtime, it will be initialized separately in each instance
+    #         #   of RelativePosition3D, for each layer. It would be more efficient to have a global
+    #         #   bucket_mtx registry... perhaps in the RelativeTransformerEncoder class, that can be passed through
+    #         self._init_pdb(pdb_fn)
+    #         return getattr(self, pdb_attr)
+
+    def _move_bucket_mtxs(self, device):
+        for k, v in self.bucket_mtxs.items():
+            self.bucket_mtxs[k] = v.to(device)
+        self.bucket_mtxs_device = device
+
     def _get_bucket_mtx(self, pdb_fn):
         """ retrieve a bucket matrix given the pdb_fn.
             if the pdb_fn was provided at init or has already been computed, then the bucket matrix will be
-            retrieved from the object buffer. if the bucket matrix has not been computed yet, it will be here """
+            retrieved from the bucket_mtxs dictionary. else, it will be computed now on-the-fly """
+
+        # ensure that all the bucket matrices are on the same device as the nn.Embedding
+        if self.bucket_mtxs_device != self.dummy_buffer.device:
+            self._move_bucket_mtxs(self.dummy_buffer.device)
+
         pdb_attr = self._pdb_key(pdb_fn)
-        if hasattr(self, pdb_attr):
-            return getattr(self, pdb_attr)
+        if pdb_attr in self.bucket_mtxs:
+            return self.bucket_mtxs[pdb_attr]
         else:
             # encountering a new PDB at runtime... process it
             # todo: if there's a new PDB at runtime, it will be initialized separately in each instance
             #   of RelativePosition3D, for each layer. It would be more efficient to have a global
             #   bucket_mtx registry... perhaps in the RelativeTransformerEncoder class, that can be passed through
             self._init_pdb(pdb_fn)
-            return getattr(self, pdb_attr)
+            return self.bucket_mtxs[pdb_attr]
+
+    # def _set_bucket_mtx(self, pdb_fn, bucket_mtx):
+    #     """ store a bucket matrix as a buffer """
+    #     # if PyTorch ever implements a BufferDict, we could use it here efficiently
+    #     # there is also BufferDict from https://botorch.org/api/_modules/botorch/utils/torch.html
+    #     # would just need to modify it to have an option for persistent=False
+    #     bucket_mtx = bucket_mtx.to(self.dummy_buffer.device)
+    #
+    #     self.register_buffer(self._pdb_key(pdb_fn), bucket_mtx, persistent=False)
 
     def _set_bucket_mtx(self, pdb_fn, bucket_mtx):
-        """ store a bucket matrix as a buffer """
-        # if PyTorch ever implements a BufferDict, we could use it here efficiently
-        # there is also BufferDict from https://botorch.org/api/_modules/botorch/utils/torch.html
-        # would just need to modify it to have an option for persistent=False
-        self.register_buffer(self._pdb_key(pdb_fn), bucket_mtx, persistent=False)
+        """ store a bucket matrix in the bucket dict """
+
+        # move the bucket_mtx to the same device that the other bucket matrices are on
+        bucket_mtx = bucket_mtx.to(self.bucket_mtxs_device)
+
+        self.bucket_mtxs[self._pdb_key(pdb_fn)] = bucket_mtx
 
     @staticmethod
     def _pdb_key(pdb_fn):
-        """ return a unique key for the given pdb_fn, used to save buffers and map unique PDBs """
+        """ return a unique key for the given pdb_fn, used to map unique PDBs """
         # note this key does NOT currently support PDBs with the same basename but different paths
         # assumes every PDB is in the format <pdb_name>.pdb
         # should be a compatible with being a class attribute, as it is used as a pytorch buffer name
@@ -92,6 +135,11 @@ class RelativePosition3D(nn.Module):
 
     def _init_pdbs(self, pdb_fns):
         start = time.time()
+
+        if pdb_fns is None:
+            # nothing to initialize if pdb_fns is None
+            return
+
         # make sure pdb_fns is a list
         if not isinstance(pdb_fns, list) and not isinstance(pdb_fns, tuple):
             pdb_fns = [pdb_fns]
@@ -117,6 +165,7 @@ class RelativePosition3D(nn.Module):
 
         # bucket_mtx indexes into the embedding lookup table to create the final distance matrix
         bucket_mtx = self._compute_bucket_mtx(structure_graph)
+
         self._set_bucket_mtx(pdb_fn, bucket_mtx)
 
     def _compute_bucketed_neighbors(self, structure_graph, source_node):
@@ -397,7 +446,7 @@ class RelativeMultiHeadAttention(nn.Module):
 class RelativeTransformerEncoderLayer(nn.Module):
     """
     d_model: the number of expected features in the input (required).
-    nhead: the number of heads in the multiheadattention models (required).
+    nhead: the number of heads in the MultiHeadAttention models (required).
     clipping_threshold: the clipping threshold for relative position embeddings
     dim_feedforward: the dimension of the feedforward network model (default=2048).
     dropout: the dropout value (default=0.1).
@@ -405,7 +454,7 @@ class RelativeTransformerEncoderLayer(nn.Module):
         ("relu" or "gelu") or a unary callable. Default: relu
     layer_norm_eps: the eps value in layer normalization components (default=1e-5).
     norm_first: if ``True``, layer norm is done prior to attention and feedforward
-        operations, respectivaly. Otherwise it's done after. Default: ``False`` (after).
+        operations, respectively. Otherwise, it's done after. Default: ``False`` (after).
     """
 
     # this is some kind of torch jit compiling helper... will also ensure these values don't change
