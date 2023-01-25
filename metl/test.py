@@ -3,14 +3,11 @@ import torch
 
 
 def main():
-    # kThmNaxC --> sequence-based position embedding (no structure needed)
-    # VnsMZTkf --> structure-based position embedding (need PDB)
-    model, data_encoder = metl.kThmNaxC()
+    model, data_encoder = metl.get_from_ident("metl-g-20m-1d")
 
-    # these are amino acid sequences
     # make sure all the sequences are the same length
-    dummy_sequences = ["SMART", "MAGIC"]
-    encoded_seqs = data_encoder.encode_sequences(dummy_sequences)
+    amino_acid_sequences = ["SMART", "MAGIC"]
+    encoded_seqs = data_encoder.encode_sequences(amino_acid_sequences)
 
     # set model to eval mode
     model.eval()
