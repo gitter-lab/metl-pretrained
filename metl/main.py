@@ -4,14 +4,18 @@ import torch.hub
 import metl.models as models
 from metl.encode import DataEncoder, Encoding
 
+UUID_URL_MAP = {
+    "kThmNaxC": "https://uwmadison.box.com/shared/static/eiyykekwkpxra77imi38j1z1g6nop7o0.pt",
+    "VnsMZTkf": "https://uwmadison.box.com/shared/static/9tgzwxcrojj1pucv6scvxca2wklpxt9t.pt",
+    "54etfaYj": "https://uwmadison.box.com/shared/static/rrefcranfmqrc9ghj6mu51abmkdb2mth.pt",
+    "bcEoygY3": "https://uwmadison.box.com/shared/static/lgjj1sxctx1rkbuvp8nvzxuq5g5l2z1g.pt"
+}
+
 
 def download_checkpoint(model_name):
-    url_map = {
-        "kThmNaxC": "https://uwmadison.box.com/shared/static/eiyykekwkpxra77imi38j1z1g6nop7o0.pt",
-        "VnsMZTkf": "https://uwmadison.box.com/shared/static/9tgzwxcrojj1pucv6scvxca2wklpxt9t.pt"
-    }
 
-    ckpt = torch.hub.load_state_dict_from_url(url_map[model_name], map_location="cpu", file_name=f"{model_name}.pt")
+    ckpt = torch.hub.load_state_dict_from_url(UUID_URL_MAP[model_name],
+                                              map_location="cpu", file_name=f"{model_name}.pt")
     state_dict = ckpt["state_dict"]
     hyper_parameters = ckpt["hyper_parameters"]
 
@@ -42,9 +46,8 @@ def load_model_and_data_encoder(model_name):
     return model, data_encoder
 
 
-def kThmNaxC():
-    return load_model_and_data_encoder("kThmNaxC")
-
-
-def VnsMZTkf():
-    return load_model_and_data_encoder("VnsMZTkf")
+def get_uuid(uuid):
+    if uuid in UUID_URL_MAP:
+        return load_model_and_data_encoder(uuid)
+    else:
+        raise ValueError(f"UUID {uuid} not found in UUID_URL_MAP")

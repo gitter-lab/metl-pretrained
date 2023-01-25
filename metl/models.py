@@ -2,7 +2,8 @@ import collections
 import math
 from argparse import ArgumentParser
 import enum
-from typing import List, Tuple
+from os.path import isfile
+from typing import List, Tuple, Optional
 
 import torch
 import torch.nn as nn
@@ -890,6 +891,139 @@ class LRModel(nn.Module):
         return output
 
 
+class TransferModel(nn.Module):
+    """ transfer learning model """
+
+    @staticmethod
+    def add_model_specific_args(parent_parser):
+
+        def none_or_int(value: str):
+            return None if value.lower() == "none" else int(value)
+
+        p = ArgumentParser(parents=[parent_parser], add_help=False)
+
+        # for model set up
+        p.add_argument('--pretrained_ckpt_path', type=str, default=None)
+
+        # where to cut off the backbone
+        p.add_argument("--backbone_cutoff", type=none_or_int, default=-1,
+                       help="where to cut off the backbone. can be a negative int, indexing back from "
+                            "pretrained_model.model.model. a value of -1 would chop off the backbone prediction head. "
+                            "a value of -2 chops the prediction head and FC layer. a value of -3 chops"
+                            "the above, as well as the global average pooling layer. all depends on architecture.")
+
+        p.add_argument("--pred_layer_input_features", type=int, default=None,
+                       help="if None, number of features will be determined based on backbone_cutoff and standard "
+                            "architecture. otherwise, specify the number of input features for the prediction layer")
+
+        # top net args
+        p.add_argument("--top_net_type", type=str, default="linear", choices=["linear", "nonlinear", "sklearn"])
+        p.add_argument("--top_net_hidden_nodes", type=int, default=256)
+        p.add_argument("--top_net_use_batchnorm", action="store_true")
+        p.add_argument("--top_net_use_dropout", action="store_true")
+        p.add_argument("--top_net_dropout_rate", type=float, default=0.1)
+
+        return p
+
+    def __init__(self,
+                 # pretrained model
+                 pretrained_ckpt_path: Optional[str] = None,
+                 pretrained_hparams: Optional[dict] = None,
+                 backbone_cutoff: Optional[int] = -1,
+                 # top net
+                 pred_layer_input_features: Optional[int] = None,
+                 top_net_type: str = "linear",
+                 top_net_hidden_nodes: int = 256,
+                 top_net_use_batchnorm: bool = False,
+                 top_net_use_dropout: bool = False,
+                 top_net_dropout_rate: float = 0.1,
+                 *args, **kwargs):
+
+        super().__init__()
+
+        # error checking: if pretrained_ckpt_path is None, then pretrained_hparams must be specified
+        if pretrained_ckpt_path is None and pretrained_hparams is None:
+            raise ValueError("Either pretrained_ckpt_path or pretrained_hparams must be specified")
+
+        # note: pdb_fns is loaded from transfer model arguments rather than original source model hparams
+        # if pdb_fns is specified as a kwarg, pass it on for structure-based RPE
+        # otherwise, can just set pdb_fns to None, and structure-based RPE will handle new PDBs on the fly
+        pdb_fns = kwargs["pdb_fns"] if "pdb_fns" in kwargs else None
+
+        # generate a fresh backbone using pretrained_hparams if specified
+        # otherwise load the backbone from the pretrained checkpoint
+        # we prioritize pretrained_hparams over pretrained_ckpt_path because
+        # pretrained_hparams will only really be specified if we are loading from a DMSTask checkpoint
+        # meaning the TransferModel has already been fine-tuned on DMS data, and we are likely loading
+        # weights from that finetuning (including weights for the backbone)
+        # whereas if pretrained_hparams is not specified but pretrained_ckpt_path is, then we are
+        # likely finetuning the TransferModel for the first time, and we need the pretrained weights for the
+        # backbone from the RosettaTask checkpoint
+        if pretrained_hparams is not None:
+            # pretrained_hparams will only be specified if we are loading from a DMSTask checkpoint
+            pretrained_hparams["pdb_fns"] = pdb_fns
+            pretrained_model = Model[pretrained_hparams["model_name"]].cls(**pretrained_hparams)
+            self.pretrained_hparams = pretrained_hparams
+        else:
+            # not supported in metl-pretrained
+            raise NotImplementedError("Loading pretrained weights from RosettaTask checkpoint not supported")
+
+        layers = collections.OrderedDict()
+
+        # set the backbone to all layers except the last layer (the pre-trained prediction layer)
+        if backbone_cutoff is None:
+            layers["backbone"] = SequentialWithArgs(*list(pretrained_model.model.children()))
+        else:
+            layers["backbone"] = SequentialWithArgs(*list(pretrained_model.model.children())[0:backbone_cutoff])
+
+        if top_net_type == "sklearn":
+            # sklearn top not doesn't require any more layers, just return model for the repr layer
+            self.model = SequentialWithArgs(layers)
+            return
+
+        # figure out dimensions of input into the prediction layer
+        if pred_layer_input_features is None:
+            # todo: can make this more robust by checking if the pretrained_mode.hparams for use_final_hidden_layer,
+            #   global_average_pooling, etc. then can determine what the layer will be based on backbone_cutoff.
+            # currently, assumes that pretrained_model uses global average pooling and a final_hidden_layer
+            if backbone_cutoff is None:
+                # no backbone cutoff... use the full network (including tasks) as the backbone
+                pred_layer_input_features = self.pretrained_hparams["num_tasks"]
+            elif backbone_cutoff == -1:
+                pred_layer_input_features = self.pretrained_hparams["final_hidden_size"]
+            elif backbone_cutoff == -2:
+                pred_layer_input_features = self.pretrained_hparams["embedding_len"]
+            elif backbone_cutoff == -3:
+                pred_layer_input_features = self.pretrained_hparams["embedding_len"] * kwargs["aa_seq_len"]
+            else:
+                raise ValueError("can't automatically determine pred_layer_input_features for given backbone_cutoff")
+
+        layers["flatten"] = nn.Flatten(start_dim=1)
+
+        # create a new prediction layer on top of the backbone
+        if top_net_type == "linear":
+            # linear layer for prediction
+            layers["prediction"] = nn.Linear(in_features=pred_layer_input_features, out_features=1)
+        elif top_net_type == "nonlinear":
+            # fully connected with hidden layer
+            fc_block = FCBlock(in_features=pred_layer_input_features,
+                               num_hidden_nodes=top_net_hidden_nodes,
+                               use_batchnorm=top_net_use_batchnorm,
+                               use_dropout=top_net_use_dropout,
+                               dropout_rate=top_net_dropout_rate)
+
+            pred_layer = nn.Linear(in_features=top_net_hidden_nodes, out_features=1)
+
+            layers["prediction"] = SequentialWithArgs(fc_block, pred_layer)
+        else:
+            raise ValueError("Unexpected type of top net layer: {}".format(top_net_type))
+
+        self.model = SequentialWithArgs(layers)
+
+    def forward(self, x, **kwargs):
+        return self.model(x, **kwargs)
+
+
 def get_activation_fn(activation, functional=True):
     if activation == "relu":
         return F.relu if functional else nn.ReLU()
@@ -919,6 +1053,7 @@ class Model(enum.Enum):
     cnn = ConvModel, False
     cnn2 = ConvModel2, False
     transformer_encoder = AttnModel, False
+    transfer_model = TransferModel, True
 
 
 def main():
