@@ -306,6 +306,10 @@ class RelativeMultiHeadAttention(nn.Module):
         # persistent=False if you don't want to save it inside state_dict
         self.register_buffer('scale', scale)
 
+        # toggles meant to be set directly by user
+        self.need_weights = False
+        self.average_attn_weights = True
+
     def _compute_attn_weights(self, query, key, len_q, len_k, batch_size, mask, pdb_fn):
         """ computes the attention weights (a "compatability function" of queries with corresponding keys) """
 
@@ -408,7 +412,7 @@ class RelativeMultiHeadAttention(nn.Module):
 
         return x
 
-    def forward(self, query, key, value, pdb_fn=None, mask=None, need_weights=False):
+    def forward(self, query, key, value, pdb_fn=None, mask=None):
         # query = [batch_size, q_len, embed_dim]
         # key = [batch_size, k_len, embed_dim]
         # value = [batch_size, v_en, embed_dim]
@@ -431,14 +435,13 @@ class RelativeMultiHeadAttention(nn.Module):
         # attn_output = [batch_size, len_q, embed_dim]
         attn_output = self.out_proj(attn_output)
 
-        if need_weights:
+        if self.need_weights:
             # return attention weights in addition to attention
-            # todo: pytorch averages attention weights over heads, why?
-            #   oh, i guess because we have attention weights for each head, but we just overall attention
-            # attn_output_weights = attn_output_weights.view(bsz, num_heads, tgt_len, src_len)
-            # return attn_output, attn_output_weights.sum(dim=1) / num_heads
-            pass
-
+            # average the weights over the heads (to get overall attention)
+            # attn_weights = [batch_size, len_q, len_k]
+            if self.average_attn_weights:
+                attn_weights = attn_weights.sum(dim=1) / self.num_heads
+            return {"attn_output": attn_output, "attn_weights": attn_weights}
         else:
             return attn_output
 
@@ -511,6 +514,9 @@ class RelativeTransformerEncoderLayer(nn.Module):
     # self-attention block
     def _sa_block(self, x: Tensor, pdb_fn=None) -> Tensor:
         x = self.self_attn(x, x, x, pdb_fn=pdb_fn)
+        if isinstance(x, dict):
+            # handle the case where we are returning attention weights
+            x = x["attn_output"]
         return self.dropout1(x)
 
     # feed forward block
