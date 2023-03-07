@@ -5,13 +5,27 @@ import metl.models as models
 from metl.encode import DataEncoder, Encoding
 
 UUID_URL_MAP = {
+    # METL-G 20M 1D and 3D
     "D72M9aEp": "https://uwmadison.box.com/shared/static/dj1b605pqmkep4eard45p75xvlk5nvpl.pt",
     "Nr9zCKpR": "https://uwmadison.box.com/shared/static/x03hzg0rvtomj3n47fkroahn7k38wu82.pt",
+
+    # METL-L GFP 2M 1D and 3D (source models)
     "8gMPQJy4": "https://uwmadison.box.com/shared/static/2fyd0ecft0dlvfo29hvfina0fwcq0y46.pt",
     "Hr4GNHws": "https://uwmadison.box.com/shared/static/fveywo9t1jtbsl3qrhjcthgd3ltwfrnp.pt",
 
-    "54etfaYj": "https://uwmadison.box.com/shared/static/rrefcranfmqrc9ghj6mu51abmkdb2mth.pt",
-    "bcEoygY3": "https://uwmadison.box.com/shared/static/lgjj1sxctx1rkbuvp8nvzxuq5g5l2z1g.pt",
+    # GFP design model, 1D
+    "YoQkzoLD": "https://uwmadison.box.com/shared/static/6rcwwl7mcbt4tgmemhxodavkx66ihi9h.pt",
+    # GFP design model, 3D
+    "PEkeRuxb": "https://uwmadison.box.com/shared/static/spzvqyct4d6qyfjxqqsi4ygxnq649p01.pt",
+
+    # METL-G 50M, 1D
+    "auKdzzwX": "https://uwmadison.box.com/shared/static/ir4xmq1g44w9a7o1xdv94teonicyzoht.pt",
+    # METL-G 50M, 3D
+    "6PSAzdfv": "https://uwmadison.box.com/shared/static/fp1tqbuad95bfe00djpb5lcb8e4as8f1.pt",
+
+    # METL-L GB1 2M 1D and 3D (source models)
+    "DMfkjVzT": "https://uwmadison.box.com/shared/static/u3p7hi9vb9p4civxzk9puc0sb48aisei.pt",
+    "epegcFiH": "https://uwmadison.box.com/shared/static/3bcoqgmij5tsfcuggpum4i3ovgqjbzju.pt",
 
 }
 
@@ -19,8 +33,22 @@ IDENT_UUID_MAP = {
     # the keys should be all lowercase
     "metl-g-20m-1d": "D72M9aEp",
     "metl-g-20m-3d": "Nr9zCKpR",
+
+    "metl-g-50m-1d": "auKdzzwX",
+    "metl-g-50m-3d": "6PSAzdfv",
+
+    # GFP local source models
     "metl-l-2m-1d-gfp": "8gMPQJy4",
     "metl-l-2m-3d-gfp": "Hr4GNHws",
+
+    # GB1 local source
+    "metl-l-2m-1d-gb1": "DMfkjVzT",
+    "metl-l-2m-3d-gb1": "epegcFiH",
+
+    # GFP design models, giving them an ident
+    "metl-l-2m-1d-gfp-ft-design": "YoQkzoLD",
+    "metl-l-2m-3d-gfp-ft-design": "PEkeRuxb",
+
 }
 
 

@@ -21,20 +21,97 @@ See the examples below.
 ## Source models
 Source models predict Rosetta energy terms.
 
-| Identifier         | UUID       | Description           | Download                                                                 |
-|--------------------|------------|-----------------------|--------------------------------------------------------------------------|
-| `METL-G-20M-1D`    | `D72M9aEp` | METL-G (20M, 1D)      | [Download](https://uwmadison.box.com/s/dj1b605pqmkep4eard45p75xvlk5nvpl) |
-| `METL-G-20M-3D`    | `Nr9zCKpR` | METL-G (20M, 3D)      | [Download](https://uwmadison.box.com/s/x03hzg0rvtomj3n47fkroahn7k38wu82) |
-| `METL-L-2M-1D-GFP` | `8gMPQJy4` | METL-L (2M, 1D) [GFP] | [Download](https://uwmadison.box.com/s/2fyd0ecft0dlvfo29hvfina0fwcq0y46) |
-| `METL-L-2M-3D-GFP` | `Hr4GNHws` | METL-L (2M, 1D) [GFP] | [Download](https://uwmadison.box.com/s/fveywo9t1jtbsl3qrhjcthgd3ltwfrnp) |
- 
+### Global source models
+| Identifier         | UUID       | Description           | Download                                                                                |
+|--------------------|------------|-----------------------|-----------------------------------------------------------------------------------------|
+| `METL-G-20M-1D`    | `D72M9aEp` | METL-G (20M, 1D)      | [Download](https://uwmadison.box.com/s/dj1b605pqmkep4eard45p75xvlk5nvpl)                |
+| `METL-G-20M-3D`    | `Nr9zCKpR` | METL-G (20M, 3D)      | [Download](https://uwmadison.box.com/s/x03hzg0rvtomj3n47fkroahn7k38wu82)                |
+| `METL-G-50M-1D`    | `auKdzzwX` | METL-G (50M, 1D)      | [Download](https://uwmadison.box.com/shared/static/ir4xmq1g44w9a7o1xdv94teonicyzoht.pt) |
+| `METL-G-50M-3D`    | `6PSAzdfv` | METL-G (50M, 3D)      | [Download](https://uwmadison.box.com/shared/static/fp1tqbuad95bfe00djpb5lcb8e4as8f1.pt) |
+
+
+### Local source models
+| Identifier         | UUID       | Description           | Download                                                                                |
+|--------------------|------------|-----------------------|-----------------------------------------------------------------------------------------|
+| `METL-L-2M-1D-GFP` | `8gMPQJy4` | METL-L (2M, 1D) [GFP] | [Download](https://uwmadison.box.com/s/2fyd0ecft0dlvfo29hvfina0fwcq0y46)                |
+| `METL-L-2M-3D-GFP` | `Hr4GNHws` | METL-L (2M, 1D) [GFP] | [Download](https://uwmadison.box.com/s/fveywo9t1jtbsl3qrhjcthgd3ltwfrnp)                |
+ | `METL-L-2M-1D-GB1` | `DMfkjVzT` | METL-L (2M, 1D) [GB1] | [Download](https://uwmadison.box.com/shared/static/u3p7hi9vb9p4civxzk9puc0sb48aisei.pt) |
+| `METL-L-2M-3D-GB1` | `epegcFiH` | METL-L (2M, 1D) [GB1] | [Download](https://uwmadison.box.com/shared/static/3bcoqgmij5tsfcuggpum4i3ovgqjbzju.pt) |
+
+
+These models will output a length 55 vector corresponding to the following energy terms (in order):
+<details>
+  <summary>
+    Expand to see energy terms
+  </summary>
+
+```
+total_score
+fa_atr
+fa_dun
+fa_elec
+fa_intra_rep
+fa_intra_sol_xover4
+fa_rep
+fa_sol
+hbond_bb_sc
+hbond_lr_bb
+hbond_sc
+hbond_sr_bb
+lk_ball_wtd
+omega
+p_aa_pp
+pro_close
+rama_prepro
+ref
+yhh_planarity
+buried_all
+buried_np
+contact_all
+contact_buried_core
+contact_buried_core_boundary
+degree
+degree_core
+degree_core_boundary
+exposed_hydrophobics
+exposed_np_AFIMLWVY
+exposed_polars
+exposed_total
+one_core_each
+pack
+res_count_buried_core
+res_count_buried_core_boundary
+res_count_buried_np_core
+res_count_buried_np_core_boundary
+ss_contributes_core
+ss_mis
+total_hydrophobic
+total_hydrophobic_AFILMVWY
+total_sasa
+two_core_each
+unsat_hbond
+centroid_total_score
+cbeta
+cenpack
+env
+hs_pair
+pair
+rg
+rsigma
+sheet
+ss_pair
+vdw
+```
+</details>
+
+
 ## Target models
 Target models are fine-tuned source models that predict functional scores from experimental sequence-function data.
 
-| Identifier | UUID       | Description                                                             | Download                                                                 |
-|------------|------------|-------------------------------------------------------------------------| ------------------------------------------------------------------------ |
-| None       | `bcEoygY3` | `METL-L-2M-1D-GFP` fine-tuned on 80 examples from the avGFP DMS dataset | [Download](https://uwmadison.box.com/s/lgjj1sxctx1rkbuvp8nvzxuq5g5l2z1g) |
-| None       | `54etfaYj` | `METL-L-2M-3D-GFP` fine-tuned on 80 examples from the avGFP DMS dataset | [Download](https://uwmadison.box.com/s/rrefcranfmqrc9ghj6mu51abmkdb2mth) |
+| DMS Dataset | Identifier                   | UUID       | Description                                                                                                                                                       | Download                                                                                |
+|:------------|------------------------------|------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| avGFP       | `METL-L-2M-1D-GFP-FT-DESIGN` | `YoQkzoLD` | The `METL-L-2M-1D-GFP` model fine-tuned on 64 examples from the avGFP DMS dataset. This model was used for the GFP design experiment described in the manuscript. | [Download](https://uwmadison.box.com/shared/static/6rcwwl7mcbt4tgmemhxodavkx66ihi9h.pt) |
+| avGFP       | `METL-L-2M-3D-GFP-FT-DESIGN` | `PEkeRuxb` | The `METL-L-2M-3D-GFP` model fine-tuned on 64 examples from the avGFP DMS dataset. This model was used for the GFP design experiment described in the manuscript. | [Download](https://uwmadison.box.com/shared/static/spzvqyct4d6qyfjxqqsi4ygxnq649p01.pt) |
 
 
 # Examples
