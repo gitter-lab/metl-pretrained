@@ -22,12 +22,12 @@ See the examples below.
 Source models predict Rosetta energy terms.
 
 ### Global source models
-| Identifier                            | UUID       | Params | RPE | Output           | Description | Download                                                                                |
-|---------------------------------------|------------|--------|-----|------------------|-------------|-----------------------------------------------------------------------------------------|
-| <code><pre>METL-G-20M-1D</pre></code> | `D72M9aEp` | 20M    | 1D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/s/dj1b605pqmkep4eard45p75xvlk5nvpl)                |
-| <code>METL-G-20M-3D</code>            | `Nr9zCKpR` | 20M    | 3D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/s/x03hzg0rvtomj3n47fkroahn7k38wu82)                |
-| <code>METL-G-50M-1D</code>            | `auKdzzwX` | 50M    | 1D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/shared/static/ir4xmq1g44w9a7o1xdv94teonicyzoht.pt) |
-| <code>METL-G-50M-3D</code>            | `6PSAzdfv` | 50M    | 3D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/shared/static/fp1tqbuad95bfe00djpb5lcb8e4as8f1.pt) |
+| Identifier                                 | UUID       | Params | RPE | Output           | Description | Download                                                                                |
+|--------------------------------------------|------------|--------|-----|------------------|-------------|-----------------------------------------------------------------------------------------|
+| <td nowrap><code>METL-G-20M-1D</code></td> | `D72M9aEp` | 20M    | 1D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/s/dj1b605pqmkep4eard45p75xvlk5nvpl)                |
+| <code>METL-G-20M-3D</code>                 | `Nr9zCKpR` | 20M    | 3D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/s/x03hzg0rvtomj3n47fkroahn7k38wu82)                |
+| <code>METL-G-50M-1D</code>                 | `auKdzzwX` | 50M    | 1D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/shared/static/ir4xmq1g44w9a7o1xdv94teonicyzoht.pt) |
+| <code>METL-G-50M-3D</code>                 | `6PSAzdfv` | 50M    | 3D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/shared/static/fp1tqbuad95bfe00djpb5lcb8e4as8f1.pt) |
 
 
 ### Local source models
