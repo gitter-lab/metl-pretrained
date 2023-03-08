@@ -1,15 +1,3 @@
-<style>
-
-table td:nth-child(1) > code {
-  white-space: nowrap;
-}
-
-table td:nth-child(2) > code {
-  white-space: nowrap;
-}
-</style>
-
-
 # Pretrained METL models
 This repository contains pretrained METL models with minimal dependencies.
 
@@ -34,21 +22,21 @@ See the examples below.
 Source models predict Rosetta energy terms.
 
 ### Global source models
-| Identifier                               | UUID       | Params | RPE | Output           | Description | Download                                                                                |
-|------------------------------------------|------------|--------|-----|------------------|-------------|-----------------------------------------------------------------------------------------|
-| <code class="block">METL-G-20M-1D</code> | `D72M9aEp` | 20M    | 1D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/s/dj1b605pqmkep4eard45p75xvlk5nvpl)                |
-| <code class="block">METL-G-20M-3D</code> | `Nr9zCKpR` | 20M    | 3D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/s/x03hzg0rvtomj3n47fkroahn7k38wu82)                |
-| <code class="block">METL-G-50M-1D</code> | `auKdzzwX` | 50M    | 1D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/shared/static/ir4xmq1g44w9a7o1xdv94teonicyzoht.pt) |
-| <code class="block">METL-G-50M-3D</code> | `6PSAzdfv` | 50M    | 3D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/shared/static/fp1tqbuad95bfe00djpb5lcb8e4as8f1.pt) |
+| Identifier                            | UUID       | Params | RPE | Output           | Description | Download                                                                                |
+|---------------------------------------|------------|--------|-----|------------------|-------------|-----------------------------------------------------------------------------------------|
+| <code><pre>METL-G-20M-1D</pre></code> | `D72M9aEp` | 20M    | 1D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/s/dj1b605pqmkep4eard45p75xvlk5nvpl)                |
+| <code>METL-G-20M-3D</code>            | `Nr9zCKpR` | 20M    | 3D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/s/x03hzg0rvtomj3n47fkroahn7k38wu82)                |
+| <code>METL-G-50M-1D</code>            | `auKdzzwX` | 50M    | 1D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/shared/static/ir4xmq1g44w9a7o1xdv94teonicyzoht.pt) |
+| <code>METL-G-50M-3D</code>            | `6PSAzdfv` | 50M    | 3D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/shared/static/fp1tqbuad95bfe00djpb5lcb8e4as8f1.pt) |
 
 
 ### Local source models
-| Identifier                                  | UUID       | Protein | Params | RPE | Output           | Description | Download                                                                                |
-|---------------------------------------------|------------|---------|--------|-----|------------------|-------------|-----------------------------------------------------------------------------------------|
-| <code class="block">METL-L-2M-1D-GFP</code> | `8gMPQJy4` | avGFP   | 2M     | 1D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/s/2fyd0ecft0dlvfo29hvfina0fwcq0y46)                |
-| <code class="block">METL-L-2M-3D-GFP</code> | `Hr4GNHws` | avGFP   | 2M     | 3D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/s/fveywo9t1jtbsl3qrhjcthgd3ltwfrnp)                |
- | <code class="block">METL-L-2M-1D-GB1</code> | `DMfkjVzT` | GB1     | 2M     | 1D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/shared/static/u3p7hi9vb9p4civxzk9puc0sb48aisei.pt) |
-| <code class="block">METL-L-2M-3D-GB1</code> | `epegcFiH` | GB1     | 2M     | 3D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/shared/static/3bcoqgmij5tsfcuggpum4i3ovgqjbzju.pt) |
+| Identifier                    | UUID       | Protein | Params | RPE | Output           | Description | Download                                                                                |
+|-------------------------------|------------|---------|--------|-----|------------------|-------------|-----------------------------------------------------------------------------------------|
+| <code>METL-L-2M-1D-GFP</code> | `8gMPQJy4` | avGFP   | 2M     | 1D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/s/2fyd0ecft0dlvfo29hvfina0fwcq0y46)                |
+| <code>METL-L-2M-3D-GFP</code> | `Hr4GNHws` | avGFP   | 2M     | 3D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/s/fveywo9t1jtbsl3qrhjcthgd3ltwfrnp)                |
+ | <code>METL-L-2M-1D-GB1</code> | `DMfkjVzT` | GB1     | 2M     | 1D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/shared/static/u3p7hi9vb9p4civxzk9puc0sb48aisei.pt) |
+| <code>METL-L-2M-3D-GB1</code> | `epegcFiH` | GB1     | 2M     | 3D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/shared/static/3bcoqgmij5tsfcuggpum4i3ovgqjbzju.pt) |
 
 These models will output a length 55 vector corresponding to the following energy terms (in order):
 <details>
