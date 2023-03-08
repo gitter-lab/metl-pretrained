@@ -1,3 +1,10 @@
+<style>
+code.block {
+  white-space: nowrap;
+}
+</style>
+
+
 # Pretrained METL models
 This repository contains pretrained METL models with minimal dependencies.
 
@@ -22,21 +29,21 @@ See the examples below.
 Source models predict Rosetta energy terms.
 
 ### Global source models
-| Identifier      | UUID       | Params | RPE | Output           | Description      | Download                                                                                |
-|-----------------|------------|--------|-----|------------------|------------------|-----------------------------------------------------------------------------------------|
-| `METL-G-20M-1D` | `D72M9aEp` | 20M    | 1D  | Rosetta energies | METL-G (20M, 1D) | [Download](https://uwmadison.box.com/s/dj1b605pqmkep4eard45p75xvlk5nvpl)                |
-| `METL-G-20M-3D` | `Nr9zCKpR` | 20M    | 3D  | Rosetta energies | METL-G (20M, 3D) | [Download](https://uwmadison.box.com/s/x03hzg0rvtomj3n47fkroahn7k38wu82)                |
-| `METL-G-50M-1D` | `auKdzzwX` | 50M    | 1D  | Rosetta energies | METL-G (50M, 1D) | [Download](https://uwmadison.box.com/shared/static/ir4xmq1g44w9a7o1xdv94teonicyzoht.pt) |
-| `METL-G-50M-3D` | `6PSAzdfv` | 50M    | 3D  | Rosetta energies | METL-G (50M, 3D) | [Download](https://uwmadison.box.com/shared/static/fp1tqbuad95bfe00djpb5lcb8e4as8f1.pt) |
+| Identifier                               | UUID       | Params | RPE | Output           | Description | Download                                                                                |
+|------------------------------------------|------------|--------|-----|------------------|-------------|-----------------------------------------------------------------------------------------|
+| <code class="block">METL-G-20M-1D</code> | `D72M9aEp` | 20M    | 1D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/s/dj1b605pqmkep4eard45p75xvlk5nvpl)                |
+| <code class="block">METL-G-20M-3D</code> | `Nr9zCKpR` | 20M    | 3D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/s/x03hzg0rvtomj3n47fkroahn7k38wu82)                |
+| <code class="block">METL-G-50M-1D</code> | `auKdzzwX` | 50M    | 1D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/shared/static/ir4xmq1g44w9a7o1xdv94teonicyzoht.pt) |
+| <code class="block">METL-G-50M-3D</code> | `6PSAzdfv` | 50M    | 3D  | Rosetta energies | METL-G      | [Download](https://uwmadison.box.com/shared/static/fp1tqbuad95bfe00djpb5lcb8e4as8f1.pt) |
 
 
 ### Local source models
-| Identifier         | UUID       | Protein | Params | RPE | Output           | Description           | Download                                                                                |
-|--------------------|------------|---------|--------|-----|------------------|-----------------------|-----------------------------------------------------------------------------------------|
-| `METL-L-2M-1D-GFP` | `8gMPQJy4` | avGFP   | 2M     | 1D  | Rosetta energies | METL-L (2M, 1D) [GFP] | [Download](https://uwmadison.box.com/s/2fyd0ecft0dlvfo29hvfina0fwcq0y46)                |
-| `METL-L-2M-3D-GFP` | `Hr4GNHws` | avGFP   | 2M     | 3D  | Rosetta energies | METL-L (2M, 1D) [GFP] | [Download](https://uwmadison.box.com/s/fveywo9t1jtbsl3qrhjcthgd3ltwfrnp)                |
- | `METL-L-2M-1D-GB1` | `DMfkjVzT` | GB1     | 2M     | 1D  | Rosetta energies | METL-L (2M, 1D) [GB1] | [Download](https://uwmadison.box.com/shared/static/u3p7hi9vb9p4civxzk9puc0sb48aisei.pt) |
-| `METL-L-2M-3D-GB1` | `epegcFiH` | GB1     | 2M     | 3D  | Rosetta energies | METL-L (2M, 1D) [GB1] | [Download](https://uwmadison.box.com/shared/static/3bcoqgmij5tsfcuggpum4i3ovgqjbzju.pt) |
+| Identifier                                  | UUID       | Protein | Params | RPE | Output           | Description | Download                                                                                |
+|---------------------------------------------|------------|---------|--------|-----|------------------|-------------|-----------------------------------------------------------------------------------------|
+| <code class="block">METL-L-2M-1D-GFP</code> | `8gMPQJy4` | avGFP   | 2M     | 1D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/s/2fyd0ecft0dlvfo29hvfina0fwcq0y46)                |
+| <code class="block">METL-L-2M-3D-GFP</code> | `Hr4GNHws` | avGFP   | 2M     | 3D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/s/fveywo9t1jtbsl3qrhjcthgd3ltwfrnp)                |
+ | <code class="block">METL-L-2M-1D-GB1</code> | `DMfkjVzT` | GB1     | 2M     | 1D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/shared/static/u3p7hi9vb9p4civxzk9puc0sb48aisei.pt) |
+| <code class="block">METL-L-2M-3D-GB1</code> | `epegcFiH` | GB1     | 2M     | 3D  | Rosetta energies | METL-L      | [Download](https://uwmadison.box.com/shared/static/3bcoqgmij5tsfcuggpum4i3ovgqjbzju.pt) |
 
 These models will output a length 55 vector corresponding to the following energy terms (in order):
 <details>
@@ -107,10 +114,10 @@ vdw
 ## Target models
 Target models are fine-tuned source models that predict functional scores from experimental sequence-function data.
 
-| DMS Dataset | Identifier                   | UUID       | RPE | Output           | Description                                                                                                                                                       | Download                                                                                |
-|:------------|------------------------------|------------|-----|------------------|-------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
-| avGFP       | `METL-L-2M-1D-GFP-FT-DESIGN` | `YoQkzoLD` | 1D  | Functional score | The `METL-L-2M-1D-GFP` model fine-tuned on 64 examples from the avGFP DMS dataset. This model was used for the GFP design experiment described in the manuscript. | [Download](https://uwmadison.box.com/shared/static/6rcwwl7mcbt4tgmemhxodavkx66ihi9h.pt) |
-| avGFP       | `METL-L-2M-3D-GFP-FT-DESIGN` | `PEkeRuxb` | 3D  | Functional score | The `METL-L-2M-3D-GFP` model fine-tuned on 64 examples from the avGFP DMS dataset. This model was used for the GFP design experiment described in the manuscript. | [Download](https://uwmadison.box.com/shared/static/spzvqyct4d6qyfjxqqsi4ygxnq649p01.pt) |
+| DMS Dataset | Identifier | UUID       | RPE | Output           | Description                                                                                                                                                        | Download                                                                                |
+|:------------|------------|------------|-----|------------------|--------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| avGFP       | `None`     | `YoQkzoLD` | 1D  | Functional score | The `METL-L-2M-1D-GFP` model, fine-tuned on 64 examples from the avGFP DMS dataset. This model was used for the GFP design experiment described in the manuscript. | [Download](https://uwmadison.box.com/shared/static/6rcwwl7mcbt4tgmemhxodavkx66ihi9h.pt) |
+| avGFP       | `None`     | `PEkeRuxb` | 3D  | Functional score | The `METL-L-2M-3D-GFP` model, fine-tuned on 64 examples from the avGFP DMS dataset. This model was used for the GFP design experiment described in the manuscript. | [Download](https://uwmadison.box.com/shared/static/spzvqyct4d6qyfjxqqsi4ygxnq649p01.pt) |
 
 
 # Examples
