@@ -1,5 +1,10 @@
 <style>
-code.block {
+
+table td:nth-child(1) > code {
+  white-space: nowrap;
+}
+
+table td:nth-child(2) > code {
   white-space: nowrap;
 }
 </style>
