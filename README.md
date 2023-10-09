@@ -113,6 +113,17 @@ Target models are fine-tuned source models that predict functional scores from e
 | avGFP       | `None`     | `PEkeRuxb` | 3D  | Functional score | The `METL-L-2M-3D-GFP` model, fine-tuned on 64 examples from the avGFP DMS dataset. This model was used for the GFP design experiment described in the manuscript. | [Download](https://uwmadison.box.com/shared/static/spzvqyct4d6qyfjxqqsi4ygxnq649p01.pt) |
 
 
+# 3D Relative Position Embeddings
+
+METL uses relative position embeddings (RPEs) based on 3D protein structure. 
+The implementation of relative position embeddings is similar to the original paper by [Shaw et al](https://aclanthology.org/N18-2074/).
+However, instead of using the default 1D sequence-based distances, we calculate relative distances based on a graph of the 3D protein structure.
+These 3D RPEs enable the transformer to use 3D distances between amino acid residues as the positional signal when calculating attention.
+When using 3D RPEs, the model requires a protein structure in the form of a PDB file, corresponding to the wild-type protein or base protein of the input variant sequence.
+
+Our testing showed that 3D RPEs improve performance for METL-Global models but do not make a difference for METL-Local models.
+We provide both 1D and 3D models in this repository. The 1D models do not require the PDB structure as an additional input.
+
 # Examples
 
 ## METL source model

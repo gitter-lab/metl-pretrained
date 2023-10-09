@@ -3,8 +3,8 @@ import metl
 
 
 def main():
-    ckpt_fn = "/Users/sg/PycharmProjects/RosettaTL/output/htcondor_runs/target/dev/condor_2023-01-25_12-58-18_avgfp_metl_local_for_bryce/run_output/training_logs/bcEoygY3/checkpoints/bcEoygY3.pt"
-    model, data_encoder = metl.get_from_checkpoint(ckpt_fn)
+    # this is a 3D RPE model, which requires a PDB file matching the WT sequence
+    model, data_encoder = metl.get_from_uuid(uuid="PEkeRuxb")
 
     # the GFP wild-type sequence
     wt = "SKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTLVTTLSYGVQCFSRYPDHMKQ" \
@@ -22,7 +22,7 @@ def main():
     model.eval()
     # no need to compute gradients for inference
     with torch.no_grad():
-        predictions = model(torch.tensor(encoded_variants))
+        predictions = model(torch.tensor(encoded_variants), pdb_fn="./1gfl_cm.pdb")
 
     print(predictions)
 
