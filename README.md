@@ -14,6 +14,7 @@ This repository contains pretrained METL models with minimal dependencies.
 
 # Available models
 Model checkpoints are available to download from Box.
+Box is a temporary storage location, and the models will be moved to stable, archival storage in the future.
 Once you have a checkpoint downloaded, you can load it into a PyTorch model using `metl.get_from_checkpoint()`.
 Alternatively, you can use `metl.get_from_uuid()` or `metl.get_from_ident()` to automatically download, cache, and load the model based on the model identifier or UUID.
 See the examples below.
