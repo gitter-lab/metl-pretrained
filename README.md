@@ -105,6 +105,46 @@ vdw
 </details>
 
 
+### Function-specific source models for GB1
+
+The GB1 experimental data measured the binding interaction between GB1 variants and Immunoglobulin G (IgG). 
+To match this experimentally characterized function, we implemented a Rosetta pipeline to model the GB1-IgG complex and compute 17 attributes related to energy changes upon binding.
+We pretrained a standard METL-Local model and a modified METL-Bind model, which additionally incorporates the IgG binding attributes into its pretraining tasks.
+
+| Identifier                     | UUID       | Protein | Params | RPE | Output                              | Description                                                                                                                                                                       | Download                                                                                |
+|--------------------------------|------------|---------|--------|-----|-------------------------------------|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|-----------------------------------------------------------------------------------------|
+| `METL-BIND-2M-3D-GB1-STANDARD` | `K6mw24Rg` | GB1     | 2M     | 3D  | Standard Rosetta energies           | Trained for the function-specific synthetic data experiment, but only trained on the standard energy terms, to use as a baseline. Should perform similarly to `METL-L-2M-3D-GB1`. | [Download](https://uwmadison.box.com/shared/static/9rqrlvivwrcs8o8s1koncywslgypcssw.pt)                |
+| `METL-BIND-2M-3D-GB1-BINDING`  | `Bo5wn2SG` | GB1     | 2M     | 3D  | Standard + binding Rosetta energies | Trained on both the standard energy terms and the binding-specific energy terms.                                                                                                  | [Download](https://uwmadison.box.com/shared/static/y8vvq3yz24qbu6crws3um1yoi0hv79tp.pt)                |
+
+
+`METL-BIND-2M-3D-GB1-BINDING` predicts the standard energy terms listed above as well as the following binding energy terms (in order):
+
+<details>
+  <summary>
+    Expand to see binding energy terms
+  </summary>
+
+```
+complex_normalized
+dG_cross
+dG_cross/dSASAx100
+dG_separated
+dG_separated/dSASAx100
+dSASA_hphobic
+dSASA_int
+dSASA_polar
+delta_unsatHbonds
+hbond_E_fraction
+hbonds_int
+nres_int
+per_residue_energy_int
+side1_normalized
+side1_score
+side2_normalized
+side2_score
+```
+</details>
+
 ## Target models
 Target models are fine-tuned source models that predict functional scores from experimental sequence-function data.
 
@@ -158,13 +198,20 @@ with torch.no_grad():
 print(predictions)
 ```
 
+If you are using a model with 3D relative position embeddings, you will need to provide the PDB structure of the wild-type or base protein.
+
+```
+predictions = model(torch.tensor(encoded_seqs, pdb_fn="../path/to/file.pdb"))
+```
+
+
 # METL target model
 
 METL target models can be loaded using the model's UUID and `metl.get_from_uuid()`.
 
 This example:
 - Automatically downloads and caches `bcEoygY3` using `metl.get_from_uuid(uuid="bcEoygY3")`.
-- Encodes several variants in specified in variant notation. A wild-type sequence is needed to encode variants.
+- Encodes several variants specified in variant notation. A wild-type sequence is needed to encode variants.
 - Runs the sequences through the model and prints the predicted DMS scores.
 
 ```python

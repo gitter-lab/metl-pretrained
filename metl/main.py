@@ -27,6 +27,11 @@ UUID_URL_MAP = {
     "DMfkjVzT": "https://uwmadison.box.com/shared/static/u3p7hi9vb9p4civxzk9puc0sb48aisei.pt",
     "epegcFiH": "https://uwmadison.box.com/shared/static/3bcoqgmij5tsfcuggpum4i3ovgqjbzju.pt",
 
+    # METL-Bind for GB1, with and without additional pretraining terms
+    "K6mw24Rg": "https://uwmadison.box.com/shared/static/9rqrlvivwrcs8o8s1koncywslgypcssw.pt",  # standard
+    "Bo5wn2SG": "https://uwmadison.box.com/shared/static/y8vvq3yz24qbu6crws3um1yoi0hv79tp.pt",  # standard + binding
+
+
 }
 
 IDENT_UUID_MAP = {
@@ -48,6 +53,10 @@ IDENT_UUID_MAP = {
     # GFP design models, giving them an ident
     "metl-l-2m-1d-gfp-ft-design": "YoQkzoLD",
     "metl-l-2m-3d-gfp-ft-design": "PEkeRuxb",
+
+    # METL-Bind for GB1
+    "metl-bind-2m-3d-gb1-standard": "K6mw24Rg",
+    "metl-bind-2m-3d-gb1-binding": "Bo5wn2SG"
 
 }
 
