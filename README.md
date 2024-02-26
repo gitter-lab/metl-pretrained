@@ -201,7 +201,7 @@ print(predictions)
 If you are using a model with 3D relative position embeddings, you will need to provide the PDB structure of the wild-type or base protein.
 
 ```
-predictions = model(torch.tensor(encoded_seqs, pdb_fn="../path/to/file.pdb"))
+predictions = model(torch.tensor(encoded_seqs), pdb_fn="../path/to/file.pdb")
 ```
 
 
