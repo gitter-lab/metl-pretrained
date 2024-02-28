@@ -1,4 +1,6 @@
 # Pretrained METL models
+[![GitHub Actions](https://github.com/gitter-lab/metl-pretrained/actions/workflows/test.yml/badge.svg)](https://github.com/gitter-lab/metl-pretrained/actions/workflows/test.yml)
+
 This repository contains pretrained METL models with minimal dependencies.
 
 # Getting started
