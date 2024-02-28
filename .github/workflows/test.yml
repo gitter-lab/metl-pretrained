@@ -1,0 +1,39 @@
+name: Tests
+on:
+- push
+- pull_request
+jobs:
+
+  test:
+    name: Test pre-trained models
+    runs-on: ${{ matrix.os }}
+    strategy:
+      max-parallel: 4
+      fail-fast: false
+      matrix:
+        os:
+        - ubuntu-latest
+        python-version:
+        - '3.9'
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+    - name: Install Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+        cache: 'pip' # caching pip dependencies
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install .
+    - name: Test METL-G
+      run: python metl/test.py
+    - name: Test 1D low-N METL-L avGFP
+      run: python metl/test2.py
+    - name: Test 3D low-N METL-L avGFP
+      run: python metl/test3.py
+    - name: Test MELT-L GB1
+      run: python metl/test4.py
