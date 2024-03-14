@@ -1,5 +1,6 @@
 # Pretrained METL models
 [![GitHub Actions](https://github.com/gitter-lab/metl-pretrained/actions/workflows/test.yml/badge.svg)](https://github.com/gitter-lab/metl-pretrained/actions/workflows/test.yml)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10819499.svg)](https://zenodo.org/doi/10.5281/zenodo.10819499)
 
 This repository contains pretrained METL models with minimal dependencies.
 For more information, please see the [metl](https://github.com/gitter-lab/metl) repository and our manuscript:
