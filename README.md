@@ -2,6 +2,12 @@
 [![GitHub Actions](https://github.com/gitter-lab/metl-pretrained/actions/workflows/test.yml/badge.svg)](https://github.com/gitter-lab/metl-pretrained/actions/workflows/test.yml)
 
 This repository contains pretrained METL models with minimal dependencies.
+For more information, please see the [metl](https://github.com/gitter-lab/metl) repository and our manuscript:
+
+**Biophysics-based protein language models for protein engineering**.  
+Sam Gelman, Bryce Johnson, Chase Freschlin, Sameer D'Costa, Anthony Gitter<sup>+</sup>, Philip A Romero<sup>+</sup>.  
+*bioRxiv*, 2024.  
+<sup>+</sup> denotes equal contribution.
 
 # Getting started
 1. Create a conda environment (or use existing one): `conda create --name myenv python=3.9`
