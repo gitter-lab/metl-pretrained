@@ -2,7 +2,7 @@
 [![GitHub Actions](https://github.com/gitter-lab/metl-pretrained/actions/workflows/test.yml/badge.svg)](https://github.com/gitter-lab/metl-pretrained/actions/workflows/test.yml)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.10819499.svg)](https://zenodo.org/doi/10.5281/zenodo.10819499)
 
-This repository contains pretrained METL models with minimal dependencies.
+This repository contains pretrained METL [models](https://zenodo.org/doi/10.5281/zenodo.11051644) with minimal dependencies.
 For more information, please see the [metl](https://github.com/gitter-lab/metl) repository and our manuscript:
 
 [Biophysics-based protein language models for protein engineering](https://doi.org/10.1101/2024.03.15.585128).  
@@ -22,8 +22,7 @@ Sam Gelman, Bryce Johnson, Chase Freschlin, Sameer D'Costa, Anthony Gitter<sup>+
     - `data_encoder` is a helper object that can be used to encode sequences and variants to be fed into the model
 
 # Available models
-Model checkpoints are available to download from Box.
-Box is a temporary storage location, and the models will be moved to stable, archival storage in the future.
+Model checkpoints are available to download from [Zenodo](https://zenodo.org/doi/10.5281/zenodo.11051644).
 Once you have a checkpoint downloaded, you can load it into a PyTorch model using `metl.get_from_checkpoint()`.
 Alternatively, you can use `metl.get_from_uuid()` or `metl.get_from_ident()` to automatically download, cache, and load the model based on the model identifier or UUID.
 See the examples below.
