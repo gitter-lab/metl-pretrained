@@ -5,32 +5,35 @@ import metl.models as models
 from metl.encode import DataEncoder, Encoding
 
 UUID_URL_MAP = {
-    # METL-G 20M 1D and 3D
-    "D72M9aEp": "https://uwmadison.box.com/shared/static/dj1b605pqmkep4eard45p75xvlk5nvpl.pt",
-    "Nr9zCKpR": "https://uwmadison.box.com/shared/static/x03hzg0rvtomj3n47fkroahn7k38wu82.pt",
+    # global source models
+    "D72M9aEp": "https://zenodo.org/records/11051645/files/METL-G-20M-1D-D72M9aEp.pt?download=1",
+    "Nr9zCKpR": "https://zenodo.org/records/11051645/files/METL-G-20M-3D-Nr9zCKpR.pt?download=1",
+    "auKdzzwX": "https://zenodo.org/records/11051645/files/METL-G-50M-1D-auKdzzwX.pt?download=1",
+    "6PSAzdfv": "https://zenodo.org/records/11051645/files/METL-G-50M-3D-6PSAzdfv.pt?download=1",
 
-    # METL-L GFP 2M 1D and 3D (source models)
-    "8gMPQJy4": "https://uwmadison.box.com/shared/static/2fyd0ecft0dlvfo29hvfina0fwcq0y46.pt",
-    "Hr4GNHws": "https://uwmadison.box.com/shared/static/fveywo9t1jtbsl3qrhjcthgd3ltwfrnp.pt",
+    # local source models
+    "8gMPQJy4": "https://zenodo.org/records/11051645/files/METL-L-2M-1D-GFP-8gMPQJy4.pt?download=1",
+    "Hr4GNHws": "https://zenodo.org/records/11051645/files/METL-L-2M-3D-GFP-Hr4GNHws.pt?download=1",
+    "8iFoiYw2": "https://zenodo.org/records/11051645/files/METL-L-2M-1D-DLG4_2022-8iFoiYw2.pt?download=1",
+    "kt5DdWTa": "https://zenodo.org/records/11051645/files/METL-L-2M-3D-DLG4_2022-kt5DdWTa.pt?download=1",
+    "DMfkjVzT": "https://zenodo.org/records/11051645/files/METL-L-2M-1D-GB1-DMfkjVzT.pt?download=1",
+    "epegcFiH": "https://zenodo.org/records/11051645/files/METL-L-2M-3D-GB1-epegcFiH.pt?download=1",
+    "kS3rUS7h": "https://zenodo.org/records/11051645/files/METL-L-2M-1D-GRB2-kS3rUS7h.pt?download=1",
+    "X7w83g6S": "https://zenodo.org/records/11051645/files/METL-L-2M-3D-GRB2-X7w83g6S.pt?download=1",
+    "UKebCQGz": "https://zenodo.org/records/11051645/files/METL-L-2M-1D-Pab1-UKebCQGz.pt?download=1",
+    "2rr8V4th": "https://zenodo.org/records/11051645/files/METL-L-2M-3D-Pab1-2rr8V4th.pt?download=1",
+    "PREhfC22": "https://zenodo.org/records/11051645/files/METL-L-2M-1D-TEM-1-PREhfC22.pt?download=1",
+    "9ASvszux": "https://zenodo.org/records/11051645/files/METL-L-2M-3D-TEM-1-9ASvszux.pt?download=1",
+    "HscFFkAb": "https://zenodo.org/records/11051645/files/METL-L-2M-1D-Ube4b-HscFFkAb.pt?download=1",
+    "H48oiNZN": "https://zenodo.org/records/11051645/files/METL-L-2M-3D-Ube4b-H48oiNZN.pt?download=1",
 
-    # GFP design model, 1D
-    "YoQkzoLD": "https://uwmadison.box.com/shared/static/6rcwwl7mcbt4tgmemhxodavkx66ihi9h.pt",
-    # GFP design model, 3D
-    "PEkeRuxb": "https://uwmadison.box.com/shared/static/spzvqyct4d6qyfjxqqsi4ygxnq649p01.pt",
+    # metl bind source models
+    "K6mw24Rg": "https://zenodo.org/records/11051645/files/METL-BIND-2M-3D-GB1-STANDARD-K6mw24Rg.pt?download=1",
+    "Bo5wn2SG": "https://zenodo.org/records/11051645/files/METL-BIND-2M-3D-GB1-BINDING-Bo5wn2SG.pt?download=1",
 
-    # METL-G 50M, 1D
-    "auKdzzwX": "https://uwmadison.box.com/shared/static/ir4xmq1g44w9a7o1xdv94teonicyzoht.pt",
-    # METL-G 50M, 3D
-    "6PSAzdfv": "https://uwmadison.box.com/shared/static/fp1tqbuad95bfe00djpb5lcb8e4as8f1.pt",
-
-    # METL-L GB1 2M 1D and 3D (source models)
-    "DMfkjVzT": "https://uwmadison.box.com/shared/static/u3p7hi9vb9p4civxzk9puc0sb48aisei.pt",
-    "epegcFiH": "https://uwmadison.box.com/shared/static/3bcoqgmij5tsfcuggpum4i3ovgqjbzju.pt",
-
-    # METL-Bind for GB1, with and without additional pretraining terms
-    "K6mw24Rg": "https://uwmadison.box.com/shared/static/9rqrlvivwrcs8o8s1koncywslgypcssw.pt",  # standard
-    "Bo5wn2SG": "https://uwmadison.box.com/shared/static/y8vvq3yz24qbu6crws3um1yoi0hv79tp.pt",  # standard + binding
-
+    # finetuned models from GFP design experiment
+    "YoQkzoLD": "https://zenodo.org/records/11051645/files/FT-METL-L-2M-1D-GFP-YoQkzoLD.pt?download=1",
+    "PEkeRuxb": "https://zenodo.org/records/11051645/files/FT-METL-L-2M-3D-GFP-PEkeRuxb.pt?download=1",
 
 }
 
@@ -38,7 +41,6 @@ IDENT_UUID_MAP = {
     # the keys should be all lowercase
     "metl-g-20m-1d": "D72M9aEp",
     "metl-g-20m-3d": "Nr9zCKpR",
-
     "metl-g-50m-1d": "auKdzzwX",
     "metl-g-50m-3d": "6PSAzdfv",
 
@@ -46,17 +48,37 @@ IDENT_UUID_MAP = {
     "metl-l-2m-1d-gfp": "8gMPQJy4",
     "metl-l-2m-3d-gfp": "Hr4GNHws",
 
-    # GB1 local source
+    # DLG4 local source models
+    "metl-l-2m-1d-dlg4": "8iFoiYw2",
+    "metl-l-2m-3d-dlg4": "kt5DdWTa",
+
+    # GB1 local source models
     "metl-l-2m-1d-gb1": "DMfkjVzT",
     "metl-l-2m-3d-gb1": "epegcFiH",
+
+    # GRB2 local source models
+    "metl-l-2m-1d-grb2": "kS3rUS7h",
+    "metl-l-2m-3d-grb2": "X7w83g6S",
+
+    # Pab1 local source models
+    "metl-l-2m-1d-pab1": "UKebCQGz",
+    "metl-l-2m-3d-pab1": "2rr8V4th",
+
+    # TEM-1 local source models
+    "metl-l-2m-1d-tem-1": "PREhfC22",
+    "metl-l-2m-3d-tem-1": "9ASvszux",
+
+    # Ube4b local source models
+    "metl-l-2m-1d-ube4b": "HscFFkAb",
+    "metl-l-2m-3d-ube4b": "H48oiNZN",
+
+    # METL-Bind for GB1
+    "metl-bind-2m-3d-gb1-standard": "K6mw24Rg",
+    "metl-bind-2m-3d-gb1-binding": "Bo5wn2SG",
 
     # GFP design models, giving them an ident
     "metl-l-2m-1d-gfp-ft-design": "YoQkzoLD",
     "metl-l-2m-3d-gfp-ft-design": "PEkeRuxb",
-
-    # METL-Bind for GB1
-    "metl-bind-2m-3d-gb1-standard": "K6mw24Rg",
-    "metl-bind-2m-3d-gb1-binding": "Bo5wn2SG"
 
 }
 
