@@ -19,7 +19,7 @@ def main():
     model.eval()
     # no need to compute gradients for inference
     with torch.no_grad():
-        predictions = model(torch.tensor(encoded_variants), pdb_fn="../pdbs/2qmt_p.pdb")
+        predictions = model(torch.tensor(encoded_variants), pdb_fn="pdbs/2qmt_p.pdb")
     print(predictions)
 
     # can also input full sequences
@@ -29,7 +29,7 @@ def main():
     encoded_sequences = data_encoder.encode_sequences(sequences)
     model.eval()
     with torch.no_grad():
-        predictions = model(torch.tensor(encoded_sequences), pdb_fn="../pdbs/2qmt_p.pdb")
+        predictions = model(torch.tensor(encoded_sequences), pdb_fn="pdbs/2qmt_p.pdb")
     print(predictions)
 
     # can also use the 1D model which doesn't require a PDB file
