@@ -35,10 +35,10 @@ jobs:
         pip list
     - name: Test METL-G
       run: python metl/test.py
-    #- name: Test 1D low-N METL-L avGFP
-    #  run: python metl/test2.py
-    #- name: Test 3D low-N METL-L avGFP
-    #  run: python metl/test3.py
+    - name: Test 1D low-N METL-L avGFP
+      run: python metl/test2.py
+    - name: Test 3D low-N METL-L avGFP
+      run: python metl/test3.py
     - name: Test MELT-L GB1
       run: |
         cd metl

@@ -3,8 +3,8 @@ import metl
 
 
 def main():
-    # "bcEoygY3" is a METL-L (2M, 1D) [GFP] model that was fine-tuned on 80 examples from the avGFP DMS dataset
-    model, data_encoder = metl.get_from_uuid(uuid="bcEoygY3")
+    # "YoQkzoLD" is a METL-L (2M, 1D) [GFP] model that was fine-tuned on 64 examples from the avGFP DMS dataset
+    model, data_encoder = metl.get_from_uuid(uuid="YoQkzoLD")
 
     # the GFP wild-type sequence
     wt = "SKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTLVTTLSYGVQCFSRYPDHMKQ" \
