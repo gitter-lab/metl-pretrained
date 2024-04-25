@@ -231,7 +231,7 @@ predictions = model(torch.tensor(encoded_seqs), pdb_fn="../path/to/file.pdb")
 METL target models can be loaded using the model's UUID and `metl.get_from_uuid()`.
 
 This example:
-- Automatically downloads and caches `8gMPQJy4` using `metl.get_from_uuid(uuid="8gMPQJy4")`.
+- Automatically downloads and caches `YoQkzoLD` using `metl.get_from_uuid(uuid="YoQkzoLD")`.
 - Encodes several variants specified in variant notation. A wild-type sequence is needed to encode variants.
 - Runs the sequences through the model and prints the predicted DMS scores.
 
@@ -239,7 +239,7 @@ This example:
 import metl
 import torch
 
-model, data_encoder = metl.get_from_uuid(uuid="8gMPQJy4")
+model, data_encoder = metl.get_from_uuid(uuid="YoQkzoLD")
 
 # the GFP wild-type sequence
 wt = "SKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTLVTTLSYGVQCFSRYPDHMKQ" \
