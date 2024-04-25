@@ -22,7 +22,7 @@ def main():
     model.eval()
     # no need to compute gradients for inference
     with torch.no_grad():
-        predictions = model(torch.tensor(encoded_variants), pdb_fn="./1gfl_cm.pdb")
+        predictions = model(torch.tensor(encoded_variants), pdb_fn="../pdbs/1gfl_cm.pdb")
 
     print(predictions)
 
