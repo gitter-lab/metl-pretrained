@@ -51,7 +51,7 @@ Source models predict Rosetta energy terms.
 | `METL-L-2M-3D-GB1`       | `epegcFiH` | GB1     | 2M     | 3D  | Rosetta energies | METL-L      | [Download](https://zenodo.org/records/11051645/files/METL-L-2M-3D-GB1-epegcFiH.pt?download=1)       |
 | `METL-L-2M-1D-GRB2`      | `kS3rUS7h` | GRB2    | 2M     | 1D  | Rosetta energies | METL-L      | [Download](https://zenodo.org/records/11051645/files/METL-L-2M-1D-GRB2-kS3rUS7h.pt?download=1)      |
 | `METL-L-2M-3D-GRB2`      | `X7w83g6S` | GRB2    | 2M     | 3D  | Rosetta energies | METL-L      | [Download](https://zenodo.org/records/11051645/files/METL-L-2M-3D-GRB2-X7w83g6S.pt?download=1)      |
-| `METL-L-2M-1D-Pab1`      | `UKebCQGz` | Pab1    | 2M     | 1D  | Rosetta energies | METL-L      | [Download](https://zenodo.org/records/11051645/files/METL-L-2M-1D-Pab1-UKebCQGz.pt?download=1))     |
+| `METL-L-2M-1D-Pab1`      | `UKebCQGz` | Pab1    | 2M     | 1D  | Rosetta energies | METL-L      | [Download](https://zenodo.org/records/11051645/files/METL-L-2M-1D-Pab1-UKebCQGz.pt?download=1)      |
 | `METL-L-2M-3D-Pab1`      | `2rr8V4th` | Pab1    | 2M     | 3D  | Rosetta energies | METL-L      | [Download](https://zenodo.org/records/11051645/files/METL-L-2M-3D-Pab1-2rr8V4th.pt?download=1)      |
 | `METL-L-2M-1D-TEM-1`     | `PREhfC22` | TEM-1   | 2M     | 1D  | Rosetta energies | METL-L      | [Download](https://zenodo.org/records/11051645/files/METL-L-2M-1D-TEM-1-PREhfC22.pt?download=1)     |
 | `METL-L-2M-3D-TEM-1`     | `9ASvszux` | TEM-1   | 2M     | 3D  | Rosetta energies | METL-L      | [Download](https://zenodo.org/records/11051645/files/METL-L-2M-3D-TEM-1-9ASvszux.pt?download=1)     |
@@ -231,7 +231,7 @@ predictions = model(torch.tensor(encoded_seqs), pdb_fn="../path/to/file.pdb")
 METL target models can be loaded using the model's UUID and `metl.get_from_uuid()`.
 
 This example:
-- Automatically downloads and caches `bcEoygY3` using `metl.get_from_uuid(uuid="bcEoygY3")`.
+- Automatically downloads and caches `8gMPQJy4` using `metl.get_from_uuid(uuid="8gMPQJy4")`.
 - Encodes several variants specified in variant notation. A wild-type sequence is needed to encode variants.
 - Runs the sequences through the model and prints the predicted DMS scores.
 
@@ -239,7 +239,7 @@ This example:
 import metl
 import torch
 
-model, data_encoder = metl.get_from_uuid(uuid="bcEoygY3")
+model, data_encoder = metl.get_from_uuid(uuid="8gMPQJy4")
 
 # the GFP wild-type sequence
 wt = "SKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTLVTTLSYGVQCFSRYPDHMKQ" \
