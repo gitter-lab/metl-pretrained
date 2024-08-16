@@ -7,7 +7,7 @@ def main(output_path: str):
     metl_imports = set()
     for file in os.listdir('./metl'):
         if '.py' in file and '_.py' not in file:
-            with open(f'../metl/{file}', 'r') as f:
+            with open(f'./metl/{file}', 'r') as f:
                 file_text = f.readlines()
                 for line in file_text:
                     line_for_compare = line.strip()
@@ -29,7 +29,7 @@ def main(output_path: str):
     huggingface_import = 'from transformers import PretrainedConfig, PreTrainedModel'
     delimiter = '$>'
 
-    with open('./huggingface_code.py', 'r') as f:
+    with open('./huggingface/huggingface_code.py', 'r') as f:
         contents = f.read()
         delim_location = contents.find(delimiter)
         cut_contents = contents[delim_location+len(delimiter):]
