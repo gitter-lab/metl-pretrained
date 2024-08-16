@@ -3,11 +3,11 @@ on: [push, workflow_dispatch]
 jobs:
   Combine-File:
     runs-on: ubuntu-latest
+    env: ${{ secrets.HF_TOKEN }}
     steps:
       - uses: actions/checkout@v4
         with:
           ref: 'huggingface_support'
-        env: ${{ secrets.HF_TOKEN }}
       - name: Combining Files
         run: python huggingface/combine_files.py -o huggingface/huggingface_wrapper.py
       - name: Push to hub
