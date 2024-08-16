@@ -1,11 +1,14 @@
 name: Compiling Huggingface Wrapper
-on: [push]
+on: [push, workflow_dispatch]
 jobs:
   Combine-File:
     runs-on: ubuntu-latest
     steps:
-      - name: Combine and push files to hub
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          ref: 'huggingface_support'
+      - name: Combining Files
         run: python huggingface/combine_files.py -o huggingface/huggingface_wrapper.py
+      - name: Push to hub
         run: python huggingface/combine_files.py ./push_to_hub -f huggingface/huggingface_wrapper.py
         
