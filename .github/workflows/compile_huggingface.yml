@@ -7,8 +7,9 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: 'huggingface_support'
+        env: ${{ secrets.HF_TOKEN }}
       - name: Combining Files
         run: python huggingface/combine_files.py -o huggingface/huggingface_wrapper.py
       - name: Push to hub
-        run: python huggingface/combine_files.py ./push_to_hub
+        run: python huggingface/push_to_hub.py
         

@@ -1,8 +1,13 @@
 from huggingface.huggingface_wrapper import METLConfig, METLModel
+from huggingface_hub import login
+import os
 from transformers import AutoModel, AutoConfig
 import torch
 
 def main():
+    API_KEY = os.getenv('HF_TOKEN')
+    login(API_KEY)
+
     config = METLConfig()
     model = METLModel(config)
     model.model = torch.nn.Linear(1, 1)
