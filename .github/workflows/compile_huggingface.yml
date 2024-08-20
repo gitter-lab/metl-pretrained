@@ -8,7 +8,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: 'huggingface_support'
+          ref: 'main'
       - name: installing deps
         run: pip install -r huggingface/requirements.txt
       - name: installing torch cpu only
