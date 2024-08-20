@@ -1,4 +1,4 @@
-from huggingface.huggingface_wrapper import METLConfig, METLModel
+from huggingface_wrapper import METLConfig, METLModel
 from huggingface_hub import login
 import os
 from transformers import AutoModel, AutoConfig
