@@ -1,3 +1,2 @@
 huggingface-hub==0.23.4
 transformers==4.42.4
-torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu

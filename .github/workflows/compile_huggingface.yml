@@ -11,6 +11,8 @@ jobs:
           ref: 'huggingface_support'
       - name: installing deps
         run: pip install -r huggingface/requirements.txt
+      - name: installing torch cpu only
+        run: pip install torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu
       - name: Combining Files
         run: python huggingface/combine_files.py -o huggingface/huggingface_wrapper.py
       - name: Push to hub
