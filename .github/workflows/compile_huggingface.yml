@@ -15,6 +15,10 @@ jobs:
         run: pip install torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu
       - name: Combining Files
         run: python huggingface/combine_files.py -o huggingface/huggingface_wrapper.py
+      - name: Formatting generated code
+        run: | 
+          python -m isort huggingface/huggingface_wrapper.py 
+          python -m black huggingface/huggingface_wrapper.py
       - name: Push to hub
         run: python huggingface/push_to_hub.py
         

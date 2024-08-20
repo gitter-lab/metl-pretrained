@@ -1,37 +1,27 @@
-from transformers import PretrainedConfig, PreTrainedModel
-from enum import Enum, auto
+import collections
+import copy
 import enum
+import math
+import os
+import time
+from argparse import ArgumentParser
+from enum import Enum, auto
+from os.path import basename, dirname, isfile, join
+from typing import List, Optional, Tuple, Union
+
+import networkx as nx
 import numpy as np
 import torch
-from torch import Tensor
+import torch.hub
 import torch.nn as nn
-from torch.nn import Linear, Dropout, LayerNorm
-import math
-from argparse import ArgumentParser
-from typing import List, Tuple, Optional, Union
-from os.path import basename, dirname, join, isfile
-from scipy.spatial.distance import cdist
-import collections
 import torch.nn.functional as F
-import time
-import networkx as nx
-import copy
 from biopandas.pdb import PandasPdb
-import os
+from scipy.spatial.distance import cdist
+from torch import Tensor
+from torch.nn import Dropout, LayerNorm, Linear
+from transformers import PretrainedConfig, PreTrainedModel
 
-#replace model.Model with Model
-#replace models.get_activation_fn with get_activation_fn
-#replace models.reset_parameters_helper with reset_parameters_helper
-#replace ra.RelativeTransformerEncoder with RelativeTransformerEncoder
-#replace ra.RelativeTransformerEncoderLayer with RelativeTransformerEncoderLayer
-#replace structure.cbeta_distance_matrix with cbeta_distance_matrix
-#replace structure.dist_thresh_graph with dist_thresh_graph 
-
-# Encode
 """ Encodes data in different formats """
-# from enum import Enum, auto
-
-# import numpy as np
 
 
 class Encoding(Enum):
@@ -40,7 +30,29 @@ class Encoding(Enum):
 
 
 class DataEncoder:
-    chars = ["*", "A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"]
+    chars = [
+        "*",
+        "A",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "K",
+        "L",
+        "M",
+        "N",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "T",
+        "V",
+        "W",
+        "Y",
+    ]
     num_chars = len(chars)
     mapping = {c: i for i, c in enumerate(chars)}
 
@@ -87,13 +99,6 @@ class DataEncoder:
         seq_ints = seq_ints.astype(int)
         return self._encode_from_int_seqs(seq_ints)
 
-## main
-
-# import torch
-# import torch.hub
-
-# import metl.models as models
-# from metl.encode import DataEncoder, Encoding
 
 UUID_URL_MAP = {
     # global source models
@@ -101,7 +106,6 @@ UUID_URL_MAP = {
     "Nr9zCKpR": "https://zenodo.org/records/11051645/files/METL-G-20M-3D-Nr9zCKpR.pt?download=1",
     "auKdzzwX": "https://zenodo.org/records/11051645/files/METL-G-50M-1D-auKdzzwX.pt?download=1",
     "6PSAzdfv": "https://zenodo.org/records/11051645/files/METL-G-50M-3D-6PSAzdfv.pt?download=1",
-
     # local source models
     "8gMPQJy4": "https://zenodo.org/records/11051645/files/METL-L-2M-1D-GFP-8gMPQJy4.pt?download=1",
     "Hr4GNHws": "https://zenodo.org/records/11051645/files/METL-L-2M-3D-GFP-Hr4GNHws.pt?download=1",
@@ -117,15 +121,12 @@ UUID_URL_MAP = {
     "9ASvszux": "https://zenodo.org/records/11051645/files/METL-L-2M-3D-TEM-1-9ASvszux.pt?download=1",
     "HscFFkAb": "https://zenodo.org/records/11051645/files/METL-L-2M-1D-Ube4b-HscFFkAb.pt?download=1",
     "H48oiNZN": "https://zenodo.org/records/11051645/files/METL-L-2M-3D-Ube4b-H48oiNZN.pt?download=1",
-
     # metl bind source models
     "K6mw24Rg": "https://zenodo.org/records/11051645/files/METL-BIND-2M-3D-GB1-STANDARD-K6mw24Rg.pt?download=1",
     "Bo5wn2SG": "https://zenodo.org/records/11051645/files/METL-BIND-2M-3D-GB1-BINDING-Bo5wn2SG.pt?download=1",
-
     # finetuned models from GFP design experiment
     "YoQkzoLD": "https://zenodo.org/records/11051645/files/FT-METL-L-2M-1D-GFP-YoQkzoLD.pt?download=1",
     "PEkeRuxb": "https://zenodo.org/records/11051645/files/FT-METL-L-2M-3D-GFP-PEkeRuxb.pt?download=1",
-
 }
 
 IDENT_UUID_MAP = {
@@ -134,49 +135,40 @@ IDENT_UUID_MAP = {
     "metl-g-20m-3d": "Nr9zCKpR",
     "metl-g-50m-1d": "auKdzzwX",
     "metl-g-50m-3d": "6PSAzdfv",
-
     # GFP local source models
     "metl-l-2m-1d-gfp": "8gMPQJy4",
     "metl-l-2m-3d-gfp": "Hr4GNHws",
-
     # DLG4 local source models
     "metl-l-2m-1d-dlg4": "8iFoiYw2",
     "metl-l-2m-3d-dlg4": "kt5DdWTa",
-
     # GB1 local source models
     "metl-l-2m-1d-gb1": "DMfkjVzT",
     "metl-l-2m-3d-gb1": "epegcFiH",
-
     # GRB2 local source models
     "metl-l-2m-1d-grb2": "kS3rUS7h",
     "metl-l-2m-3d-grb2": "X7w83g6S",
-
     # Pab1 local source models
     "metl-l-2m-1d-pab1": "UKebCQGz",
     "metl-l-2m-3d-pab1": "2rr8V4th",
-
     # TEM-1 local source models
     "metl-l-2m-1d-tem-1": "PREhfC22",
     "metl-l-2m-3d-tem-1": "9ASvszux",
-
     # Ube4b local source models
     "metl-l-2m-1d-ube4b": "HscFFkAb",
     "metl-l-2m-3d-ube4b": "H48oiNZN",
-
     # METL-Bind for GB1
     "metl-bind-2m-3d-gb1-standard": "K6mw24Rg",
     "metl-bind-2m-3d-gb1-binding": "Bo5wn2SG",
-
     # GFP design models, giving them an ident
     "metl-l-2m-1d-gfp-ft-design": "YoQkzoLD",
     "metl-l-2m-3d-gfp-ft-design": "PEkeRuxb",
-
 }
 
 
 def download_checkpoint(uuid):
-    ckpt = torch.hub.load_state_dict_from_url(UUID_URL_MAP[uuid],
-                                              map_location="cpu", file_name=f"{uuid}.pt")
+    ckpt = torch.hub.load_state_dict_from_url(
+        UUID_URL_MAP[uuid], map_location="cpu", file_name=f"{uuid}.pt"
+    )
     state_dict = ckpt["state_dict"]
     hyper_parameters = ckpt["hyper_parameters"]
 
@@ -188,8 +180,10 @@ def _get_data_encoding(hparams):
         encoding = Encoding.INT_SEQS
     elif "encoding" in hparams and hparams["encoding"] == "one_hot":
         encoding = Encoding.ONE_HOT
-    elif (("encoding" in hparams and hparams["encoding"] == "auto") or "encoding" not in hparams) and \
-            hparams["model_name"] in ["transformer_encoder"]:
+    elif (
+        ("encoding" in hparams and hparams["encoding"] == "auto")
+        or "encoding" not in hparams
+    ) and hparams["model_name"] in ["transformer_encoder"]:
         encoding = Encoding.INT_SEQS
     else:
         raise ValueError("Detected unsupported encoding in hyperparameters")
@@ -229,25 +223,9 @@ def get_from_checkpoint(ckpt_fn):
     hyper_parameters = ckpt["hyper_parameters"]
     return load_model_and_data_encoder(state_dict, hyper_parameters)
 
-### models
-
-# import collections
-# import math
-# from argparse import ArgumentParser
-# import enum
-# from os.path import isfile
-# from typing import List, Tuple, Optional
-
-# import torch
-# import torch.nn as nn
-# import torch.nn.functional as F
-# from torch import Tensor
-
-# import metl.relative_attention as ra
-
 
 def reset_parameters_helper(m: nn.Module):
-    """ helper function for resetting model parameters, meant to be used with model.apply() """
+    """helper function for resetting model parameters, meant to be used with model.apply()"""
 
     # the PyTorch MultiHeadAttention has a private function _reset_parameters()
     # other layers have a public reset_parameters()... go figure
@@ -255,8 +233,10 @@ def reset_parameters_helper(m: nn.Module):
     reset_parameters_private = getattr(m, "_reset_parameters", None)
 
     if callable(reset_parameters) and callable(reset_parameters_private):
-        raise RuntimeError("Module has both public and private methods for resetting parameters. "
-                           "This is unexpected... probably should just call the public one.")
+        raise RuntimeError(
+            "Module has both public and private methods for resetting parameters. "
+            "This is unexpected... probably should just call the public one."
+        )
 
     if callable(reset_parameters):
         m.reset_parameters()
@@ -268,7 +248,9 @@ def reset_parameters_helper(m: nn.Module):
 class SequentialWithArgs(nn.Sequential):
     def forward(self, x, **kwargs):
         for module in self:
-            if isinstance(module, RelativeTransformerEncoder) or isinstance(module, SequentialWithArgs):
+            if isinstance(module, RelativeTransformerEncoder) or isinstance(
+                module, SequentialWithArgs
+            ):
                 # for relative transformer encoders, pass in kwargs (pdb_fn)
                 x = module(x, **kwargs)
             else:
@@ -286,7 +268,9 @@ class PositionalEncoding(nn.Module):
 
         pe = torch.zeros(max_len, d_model)
         position = torch.arange(0, max_len, dtype=torch.float).unsqueeze(1)
-        div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
+        div_term = torch.exp(
+            torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model)
+        )
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
         # note the implementation on Pytorch's website expects [seq_len, batch_size, embedding_dim]
@@ -295,14 +279,14 @@ class PositionalEncoding(nn.Module):
         # also down below, changing our indexing into the position encoding to reflect new dimensions
         # pe = pe.unsqueeze(0).transpose(0, 1)
         pe = pe.unsqueeze(0)
-        self.register_buffer('pe', pe)
+        self.register_buffer("pe", pe)
 
     def forward(self, x, **kwargs):
         # note the implementation on Pytorch's website expects [seq_len, batch_size, embedding_dim]
         # however our data is in [batch_size, seq_len, embedding_dim] (i.e. batch_first)
         # fixed by changing x = x + self.pe[:x.size(0)] to x = x + self.pe[:, :x.size(1), :]
         # x = x + self.pe[:x.size(0), :]
-        x = x + self.pe[:, :x.size(1), :]
+        x = x + self.pe[:, : x.size(1), :]
         return self.dropout(x)
 
 
@@ -393,23 +377,27 @@ class ScaledEmbedding(nn.Module):
 
 
 class FCBlock(nn.Module):
-    """ a fully connected block with options for batchnorm and dropout
-        can extend in the future with option for different activation, etc """
+    """a fully connected block with options for batchnorm and dropout
+    can extend in the future with option for different activation, etc"""
 
-    def __init__(self,
-                 in_features: int,
-                 num_hidden_nodes: int = 64,
-                 use_batchnorm: bool = False,
-                 use_layernorm: bool = False,
-                 norm_before_activation: bool = False,
-                 use_dropout: bool = False,
-                 dropout_rate: float = 0.2,
-                 activation: str = "relu"):
+    def __init__(
+        self,
+        in_features: int,
+        num_hidden_nodes: int = 64,
+        use_batchnorm: bool = False,
+        use_layernorm: bool = False,
+        norm_before_activation: bool = False,
+        use_dropout: bool = False,
+        dropout_rate: float = 0.2,
+        activation: str = "relu",
+    ):
 
         super().__init__()
 
         if use_batchnorm and use_layernorm:
-            raise ValueError("Only one of use_batchnorm or use_layernorm can be set to True")
+            raise ValueError(
+                "Only one of use_batchnorm or use_layernorm can be set to True"
+            )
 
         self.use_batchnorm = use_batchnorm
         self.use_dropout = use_dropout
@@ -439,7 +427,9 @@ class FCBlock(nn.Module):
         x = self.activation(x)
 
         # batchnorm being applied after activation, there is some discussion on this online
-        if (self.use_batchnorm or self.use_layernorm) and not self.norm_before_activation:
+        if (
+            self.use_batchnorm or self.use_layernorm
+        ) and not self.norm_before_activation:
             x = self.norm(x)
 
         # dropout being applied last
@@ -450,8 +440,9 @@ class FCBlock(nn.Module):
 
 
 class TaskSpecificPredictionLayers(nn.Module):
-    """ Constructs num_tasks [dense(num_hidden_nodes)+relu+dense(1)] layers, each independently transforming input
-        into a single output node. All num_tasks outputs are then concatenated into a single tensor. """
+    """Constructs num_tasks [dense(num_hidden_nodes)+relu+dense(1)] layers, each independently transforming input
+    into a single output node. All num_tasks outputs are then concatenated into a single tensor.
+    """
 
     # todo: the independent layers are run in sequence rather than in parallel, causing a slowdown that
     #   scales with the number of tasks. might be able to run in parallel by hacking convolution operation
@@ -459,14 +450,16 @@ class TaskSpecificPredictionLayers(nn.Module):
     #   https://github.com/pytorch/pytorch/issues/54147
     #   https://github.com/pytorch/pytorch/issues/36459
 
-    def __init__(self,
-                 num_tasks: int,
-                 in_features: int,
-                 num_hidden_nodes: int = 64,
-                 use_batchnorm: bool = False,
-                 use_dropout: bool = False,
-                 dropout_rate: float = 0.2,
-                 activation: str = "relu"):
+    def __init__(
+        self,
+        num_tasks: int,
+        in_features: int,
+        num_hidden_nodes: int = 64,
+        use_batchnorm: bool = False,
+        use_dropout: bool = False,
+        dropout_rate: float = 0.2,
+        activation: str = "relu",
+    ):
 
         super().__init__()
 
@@ -474,13 +467,17 @@ class TaskSpecificPredictionLayers(nn.Module):
         # which can be combined with torch.cat into prediction vector
         self.task_specific_pred_layers = nn.ModuleList()
         for i in range(num_tasks):
-            layers = [FCBlock(in_features=in_features,
-                              num_hidden_nodes=num_hidden_nodes,
-                              use_batchnorm=use_batchnorm,
-                              use_dropout=use_dropout,
-                              dropout_rate=dropout_rate,
-                              activation=activation),
-                      nn.Linear(in_features=num_hidden_nodes, out_features=1)]
+            layers = [
+                FCBlock(
+                    in_features=in_features,
+                    num_hidden_nodes=num_hidden_nodes,
+                    use_batchnorm=use_batchnorm,
+                    use_dropout=use_dropout,
+                    dropout_rate=dropout_rate,
+                    activation=activation,
+                ),
+                nn.Linear(in_features=num_hidden_nodes, out_features=1),
+            ]
             self.task_specific_pred_layers.append(nn.Sequential(*layers))
 
     def forward(self, x, **kwargs):
@@ -494,7 +491,7 @@ class TaskSpecificPredictionLayers(nn.Module):
 
 
 class GlobalAveragePooling(nn.Module):
-    """ helper class for global average pooling """
+    """helper class for global average pooling"""
 
     def __init__(self, dim=1):
         super().__init__()
@@ -507,7 +504,7 @@ class GlobalAveragePooling(nn.Module):
 
 
 class CLSPooling(nn.Module):
-    """ helper class for CLS token extraction """
+    """helper class for CLS token extraction"""
 
     def __init__(self, cls_position=0):
         super().__init__()
@@ -523,8 +520,8 @@ class CLSPooling(nn.Module):
 
 
 class TransformerEncoderWrapper(nn.TransformerEncoder):
-    """ wrapper around PyTorch's TransformerEncoder that re-initializes layer parameters,
-        so each transformer encoder layer has a different initialization """
+    """wrapper around PyTorch's TransformerEncoder that re-initializes layer parameters,
+    so each transformer encoder layer has a different initialization"""
 
     # todo: PyTorch is changing its transformer API... check up on and see if there is a better way
     def __init__(self, encoder_layer, num_layers, norm=None, reset_params=True):
@@ -540,72 +537,115 @@ class AttnModel(nn.Module):
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
 
-        parser.add_argument('--pos_encoding', type=str, default="absolute",
-                            choices=["none", "absolute", "relative", "relative_3D"],
-                            help="what type of positional encoding to use")
-        parser.add_argument('--pos_encoding_dropout', type=float, default=0.1,
-                            help="out much dropout to use in positional encoding, for pos_encoding==absolute")
-        parser.add_argument('--clipping_threshold', type=int, default=3,
-                            help="clipping threshold for relative position embedding, for relative and relative_3D")
-        parser.add_argument('--contact_threshold', type=int, default=7,
-                            help="threshold, in angstroms, for contact map, for relative_3D")
-        parser.add_argument('--embedding_len', type=int, default=128)
-        parser.add_argument('--num_heads', type=int, default=2)
-        parser.add_argument('--num_hidden', type=int, default=64)
-        parser.add_argument('--num_enc_layers', type=int, default=2)
-        parser.add_argument('--enc_layer_dropout', type=float, default=0.1)
-        parser.add_argument('--use_final_encoder_norm', action="store_true", default=False)
+        parser.add_argument(
+            "--pos_encoding",
+            type=str,
+            default="absolute",
+            choices=["none", "absolute", "relative", "relative_3D"],
+            help="what type of positional encoding to use",
+        )
+        parser.add_argument(
+            "--pos_encoding_dropout",
+            type=float,
+            default=0.1,
+            help="out much dropout to use in positional encoding, for pos_encoding==absolute",
+        )
+        parser.add_argument(
+            "--clipping_threshold",
+            type=int,
+            default=3,
+            help="clipping threshold for relative position embedding, for relative and relative_3D",
+        )
+        parser.add_argument(
+            "--contact_threshold",
+            type=int,
+            default=7,
+            help="threshold, in angstroms, for contact map, for relative_3D",
+        )
+        parser.add_argument("--embedding_len", type=int, default=128)
+        parser.add_argument("--num_heads", type=int, default=2)
+        parser.add_argument("--num_hidden", type=int, default=64)
+        parser.add_argument("--num_enc_layers", type=int, default=2)
+        parser.add_argument("--enc_layer_dropout", type=float, default=0.1)
+        parser.add_argument(
+            "--use_final_encoder_norm", action="store_true", default=False
+        )
 
-        parser.add_argument('--global_average_pooling', action="store_true", default=False)
-        parser.add_argument('--cls_pooling', action="store_true", default=False)
+        parser.add_argument(
+            "--global_average_pooling", action="store_true", default=False
+        )
+        parser.add_argument("--cls_pooling", action="store_true", default=False)
 
-        parser.add_argument('--use_task_specific_layers', action="store_true", default=False,
-                            help="exclusive with use_final_hidden_layer; takes priority over use_final_hidden_layer"
-                                 " if both flags are set")
-        parser.add_argument('--task_specific_hidden_nodes', type=int, default=64)
-        parser.add_argument('--use_final_hidden_layer', action="store_true", default=False)
-        parser.add_argument('--final_hidden_size', type=int, default=64)
-        parser.add_argument('--use_final_hidden_layer_norm', action="store_true", default=False)
-        parser.add_argument('--final_hidden_layer_norm_before_activation', action="store_true", default=False)
-        parser.add_argument('--use_final_hidden_layer_dropout', action="store_true", default=False)
-        parser.add_argument('--final_hidden_layer_dropout_rate', type=float, default=0.2)
+        parser.add_argument(
+            "--use_task_specific_layers",
+            action="store_true",
+            default=False,
+            help="exclusive with use_final_hidden_layer; takes priority over use_final_hidden_layer"
+            " if both flags are set",
+        )
+        parser.add_argument("--task_specific_hidden_nodes", type=int, default=64)
+        parser.add_argument(
+            "--use_final_hidden_layer", action="store_true", default=False
+        )
+        parser.add_argument("--final_hidden_size", type=int, default=64)
+        parser.add_argument(
+            "--use_final_hidden_layer_norm", action="store_true", default=False
+        )
+        parser.add_argument(
+            "--final_hidden_layer_norm_before_activation",
+            action="store_true",
+            default=False,
+        )
+        parser.add_argument(
+            "--use_final_hidden_layer_dropout", action="store_true", default=False
+        )
+        parser.add_argument(
+            "--final_hidden_layer_dropout_rate", type=float, default=0.2
+        )
 
-        parser.add_argument('--activation', type=str, default="relu",
-                            help="activation function used for all activations in the network")
+        parser.add_argument(
+            "--activation",
+            type=str,
+            default="relu",
+            help="activation function used for all activations in the network",
+        )
         return parser
 
-    def __init__(self,
-                 # data args
-                 num_tasks: int,
-                 aa_seq_len: int,
-                 num_tokens: int,
-                 # transformer encoder model args
-                 pos_encoding: str = "absolute",
-                 pos_encoding_dropout: float = 0.1,
-                 clipping_threshold: int = 3,
-                 contact_threshold: int = 7,
-                 pdb_fns: List[str] = None,
-                 embedding_len: int = 64,
-                 num_heads: int = 2,
-                 num_hidden: int = 64,
-                 num_enc_layers: int = 2,
-                 enc_layer_dropout: float = 0.1,
-                 use_final_encoder_norm: bool = False,
-                 # pooling to fixed-length representation
-                 global_average_pooling: bool = True,
-                 cls_pooling: bool = False,
-                 # prediction layers
-                 use_task_specific_layers: bool = False,
-                 task_specific_hidden_nodes: int = 64,
-                 use_final_hidden_layer: bool = False,
-                 final_hidden_size: int = 64,
-                 use_final_hidden_layer_norm: bool = False,
-                 final_hidden_layer_norm_before_activation: bool = False,
-                 use_final_hidden_layer_dropout: bool = False,
-                 final_hidden_layer_dropout_rate: float = 0.2,
-                 # activation function
-                 activation: str = "relu",
-                 *args, **kwargs):
+    def __init__(
+        self,
+        # data args
+        num_tasks: int,
+        aa_seq_len: int,
+        num_tokens: int,
+        # transformer encoder model args
+        pos_encoding: str = "absolute",
+        pos_encoding_dropout: float = 0.1,
+        clipping_threshold: int = 3,
+        contact_threshold: int = 7,
+        pdb_fns: List[str] = None,
+        embedding_len: int = 64,
+        num_heads: int = 2,
+        num_hidden: int = 64,
+        num_enc_layers: int = 2,
+        enc_layer_dropout: float = 0.1,
+        use_final_encoder_norm: bool = False,
+        # pooling to fixed-length representation
+        global_average_pooling: bool = True,
+        cls_pooling: bool = False,
+        # prediction layers
+        use_task_specific_layers: bool = False,
+        task_specific_hidden_nodes: int = 64,
+        use_final_hidden_layer: bool = False,
+        final_hidden_size: int = 64,
+        use_final_hidden_layer_norm: bool = False,
+        final_hidden_layer_norm_before_activation: bool = False,
+        use_final_hidden_layer_dropout: bool = False,
+        final_hidden_layer_dropout_rate: float = 0.2,
+        # activation function
+        activation: str = "relu",
+        *args,
+        **kwargs,
+    ):
 
         super().__init__()
 
@@ -617,21 +657,27 @@ class AttnModel(nn.Module):
         layers = collections.OrderedDict()
 
         # amino acid embedding
-        layers["embedder"] = ScaledEmbedding(num_embeddings=num_tokens, embedding_dim=embedding_len, scale=True)
+        layers["embedder"] = ScaledEmbedding(
+            num_embeddings=num_tokens, embedding_dim=embedding_len, scale=True
+        )
 
         # absolute positional encoding
         if pos_encoding == "absolute":
-            layers["pos_encoder"] = PositionalEncoding(embedding_len, dropout=pos_encoding_dropout, max_len=512)
+            layers["pos_encoder"] = PositionalEncoding(
+                embedding_len, dropout=pos_encoding_dropout, max_len=512
+            )
 
         # transformer encoder layer for none or absolute positional encoding
         if pos_encoding in ["none", "absolute"]:
-            encoder_layer = torch.nn.TransformerEncoderLayer(d_model=embedding_len,
-                                                             nhead=num_heads,
-                                                             dim_feedforward=num_hidden,
-                                                             dropout=enc_layer_dropout,
-                                                             activation=get_activation_fn(activation),
-                                                             norm_first=True,
-                                                             batch_first=True)
+            encoder_layer = torch.nn.TransformerEncoderLayer(
+                d_model=embedding_len,
+                nhead=num_heads,
+                dim_feedforward=num_hidden,
+                dropout=enc_layer_dropout,
+                activation=get_activation_fn(activation),
+                norm_first=True,
+                batch_first=True,
+            )
 
             # layer norm that is used after the transformer encoder layers
             # if the norm_first is False, this is *redundant* and not needed
@@ -641,30 +687,36 @@ class AttnModel(nn.Module):
             if use_final_encoder_norm:
                 encoder_norm = nn.LayerNorm(embedding_len)
 
-            layers["tr_encoder"] = TransformerEncoderWrapper(encoder_layer=encoder_layer,
-                                                             num_layers=num_enc_layers,
-                                                             norm=encoder_norm)
+            layers["tr_encoder"] = TransformerEncoderWrapper(
+                encoder_layer=encoder_layer,
+                num_layers=num_enc_layers,
+                norm=encoder_norm,
+            )
 
         # transformer encoder layer for relative position encoding
         elif pos_encoding in ["relative", "relative_3D"]:
-            relative_encoder_layer = RelativeTransformerEncoderLayer(d_model=embedding_len,
-                                                                        nhead=num_heads,
-                                                                        pos_encoding=pos_encoding,
-                                                                        clipping_threshold=clipping_threshold,
-                                                                        contact_threshold=contact_threshold,
-                                                                        pdb_fns=pdb_fns,
-                                                                        dim_feedforward=num_hidden,
-                                                                        dropout=enc_layer_dropout,
-                                                                        activation=get_activation_fn(activation),
-                                                                        norm_first=True)
+            relative_encoder_layer = RelativeTransformerEncoderLayer(
+                d_model=embedding_len,
+                nhead=num_heads,
+                pos_encoding=pos_encoding,
+                clipping_threshold=clipping_threshold,
+                contact_threshold=contact_threshold,
+                pdb_fns=pdb_fns,
+                dim_feedforward=num_hidden,
+                dropout=enc_layer_dropout,
+                activation=get_activation_fn(activation),
+                norm_first=True,
+            )
 
             encoder_norm = None
             if use_final_encoder_norm:
                 encoder_norm = nn.LayerNorm(embedding_len)
 
-            layers["tr_encoder"] = RelativeTransformerEncoder(encoder_layer=relative_encoder_layer,
-                                                                 num_layers=num_enc_layers,
-                                                                 norm=encoder_norm)
+            layers["tr_encoder"] = RelativeTransformerEncoder(
+                encoder_layer=relative_encoder_layer,
+                num_layers=num_enc_layers,
+                norm=encoder_norm,
+            )
 
         # GLOBAL AVERAGE POOLING OR CLS TOKEN
         # set up the layers and output shapes (i.e. input shapes for the pred layer)
@@ -684,24 +736,32 @@ class AttnModel(nn.Module):
         # PREDICTION
         if use_task_specific_layers:
             # task specific prediction layers (nonlinear transform for each task)
-            layers["prediction"] = TaskSpecificPredictionLayers(num_tasks=num_tasks,
-                                                                in_features=pred_layer_input_features,
-                                                                num_hidden_nodes=task_specific_hidden_nodes,
-                                                                activation=activation)
+            layers["prediction"] = TaskSpecificPredictionLayers(
+                num_tasks=num_tasks,
+                in_features=pred_layer_input_features,
+                num_hidden_nodes=task_specific_hidden_nodes,
+                activation=activation,
+            )
         elif use_final_hidden_layer:
             # combined prediction linear (linear transform for each task)
-            layers["fc1"] = FCBlock(in_features=pred_layer_input_features,
-                                    num_hidden_nodes=final_hidden_size,
-                                    use_batchnorm=False,
-                                    use_layernorm=use_final_hidden_layer_norm,
-                                    norm_before_activation=final_hidden_layer_norm_before_activation,
-                                    use_dropout=use_final_hidden_layer_dropout,
-                                    dropout_rate=final_hidden_layer_dropout_rate,
-                                    activation=activation)
+            layers["fc1"] = FCBlock(
+                in_features=pred_layer_input_features,
+                num_hidden_nodes=final_hidden_size,
+                use_batchnorm=False,
+                use_layernorm=use_final_hidden_layer_norm,
+                norm_before_activation=final_hidden_layer_norm_before_activation,
+                use_dropout=use_final_hidden_layer_dropout,
+                dropout_rate=final_hidden_layer_dropout_rate,
+                activation=activation,
+            )
 
-            layers["prediction"] = nn.Linear(in_features=final_hidden_size, out_features=num_tasks)
+            layers["prediction"] = nn.Linear(
+                in_features=final_hidden_size, out_features=num_tasks
+            )
         else:
-            layers["prediction"] = nn.Linear(in_features=pred_layer_input_features, out_features=num_tasks)
+            layers["prediction"] = nn.Linear(
+                in_features=pred_layer_input_features, out_features=num_tasks
+            )
 
         # FINAL MODEL
         self.model = SequentialWithArgs(layers)
@@ -711,8 +771,9 @@ class AttnModel(nn.Module):
 
 
 class Transpose(nn.Module):
-    """ helper layer to swap data from (batch, seq, channels) to (batch, channels, seq)
-        used as a helper in the convolutional network which pytorch defaults to channels-first """
+    """helper layer to swap data from (batch, seq, channels) to (batch, channels, seq)
+    used as a helper in the convolutional network which pytorch defaults to channels-first
+    """
 
     def __init__(self, dims: Tuple[int, ...] = (1, 2)):
         super().__init__()
@@ -728,34 +789,40 @@ def conv1d_out_shape(seq_len, kernel_size, stride=1, pad=0, dilation=1):
 
 
 class ConvBlock(nn.Module):
-    def __init__(self,
-                 in_channels: int,
-                 out_channels: int,
-                 kernel_size: int,
-                 dilation: int = 1,
-                 padding: str = "same",
-                 use_batchnorm: bool = False,
-                 use_layernorm: bool = False,
-                 norm_before_activation: bool = False,
-                 use_dropout: bool = False,
-                 dropout_rate: float = 0.2,
-                 activation: str = "relu"):
+    def __init__(
+        self,
+        in_channels: int,
+        out_channels: int,
+        kernel_size: int,
+        dilation: int = 1,
+        padding: str = "same",
+        use_batchnorm: bool = False,
+        use_layernorm: bool = False,
+        norm_before_activation: bool = False,
+        use_dropout: bool = False,
+        dropout_rate: float = 0.2,
+        activation: str = "relu",
+    ):
 
         super().__init__()
 
         if use_batchnorm and use_layernorm:
-            raise ValueError("Only one of use_batchnorm or use_layernorm can be set to True")
+            raise ValueError(
+                "Only one of use_batchnorm or use_layernorm can be set to True"
+            )
 
         self.use_batchnorm = use_batchnorm
         self.use_layernorm = use_layernorm
         self.norm_before_activation = norm_before_activation
         self.use_dropout = use_dropout
 
-        self.conv = nn.Conv1d(in_channels=in_channels,
-                              out_channels=out_channels,
-                              kernel_size=kernel_size,
-                              padding=padding,
-                              dilation=dilation)
+        self.conv = nn.Conv1d(
+            in_channels=in_channels,
+            out_channels=out_channels,
+            kernel_size=kernel_size,
+            padding=padding,
+            dilation=dilation,
+        )
 
         self.activation = get_activation_fn(activation, functional=False)
 
@@ -793,72 +860,101 @@ class ConvBlock(nn.Module):
 
 
 class ConvModel2(nn.Module):
-    """ convolutional source model that supports padded inputs, pooling, etc """
+    """convolutional source model that supports padded inputs, pooling, etc"""
 
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--use_embedding', action="store_true", default=False)
-        parser.add_argument('--embedding_len', type=int, default=128)
+        parser.add_argument("--use_embedding", action="store_true", default=False)
+        parser.add_argument("--embedding_len", type=int, default=128)
 
-        parser.add_argument('--num_conv_layers', type=int, default=1)
-        parser.add_argument('--kernel_sizes', type=int, nargs="+", default=[7])
-        parser.add_argument('--out_channels', type=int, nargs="+", default=[128])
-        parser.add_argument('--dilations', type=int, nargs="+", default=[1])
-        parser.add_argument('--padding', type=str, default="valid", choices=["valid", "same"])
-        parser.add_argument('--use_conv_layer_norm', action="store_true", default=False)
-        parser.add_argument('--conv_layer_norm_before_activation', action="store_true", default=False)
-        parser.add_argument('--use_conv_layer_dropout', action="store_true", default=False)
-        parser.add_argument('--conv_layer_dropout_rate', type=float, default=0.2)
+        parser.add_argument("--num_conv_layers", type=int, default=1)
+        parser.add_argument("--kernel_sizes", type=int, nargs="+", default=[7])
+        parser.add_argument("--out_channels", type=int, nargs="+", default=[128])
+        parser.add_argument("--dilations", type=int, nargs="+", default=[1])
+        parser.add_argument(
+            "--padding", type=str, default="valid", choices=["valid", "same"]
+        )
+        parser.add_argument("--use_conv_layer_norm", action="store_true", default=False)
+        parser.add_argument(
+            "--conv_layer_norm_before_activation", action="store_true", default=False
+        )
+        parser.add_argument(
+            "--use_conv_layer_dropout", action="store_true", default=False
+        )
+        parser.add_argument("--conv_layer_dropout_rate", type=float, default=0.2)
 
-        parser.add_argument('--global_average_pooling', action="store_true", default=False)
+        parser.add_argument(
+            "--global_average_pooling", action="store_true", default=False
+        )
 
-        parser.add_argument('--use_task_specific_layers', action="store_true", default=False)
-        parser.add_argument('--task_specific_hidden_nodes', type=int, default=64)
-        parser.add_argument('--use_final_hidden_layer', action="store_true", default=False)
-        parser.add_argument('--final_hidden_size', type=int, default=64)
-        parser.add_argument('--use_final_hidden_layer_norm', action="store_true", default=False)
-        parser.add_argument('--final_hidden_layer_norm_before_activation', action="store_true", default=False)
-        parser.add_argument('--use_final_hidden_layer_dropout', action="store_true", default=False)
-        parser.add_argument('--final_hidden_layer_dropout_rate', type=float, default=0.2)
+        parser.add_argument(
+            "--use_task_specific_layers", action="store_true", default=False
+        )
+        parser.add_argument("--task_specific_hidden_nodes", type=int, default=64)
+        parser.add_argument(
+            "--use_final_hidden_layer", action="store_true", default=False
+        )
+        parser.add_argument("--final_hidden_size", type=int, default=64)
+        parser.add_argument(
+            "--use_final_hidden_layer_norm", action="store_true", default=False
+        )
+        parser.add_argument(
+            "--final_hidden_layer_norm_before_activation",
+            action="store_true",
+            default=False,
+        )
+        parser.add_argument(
+            "--use_final_hidden_layer_dropout", action="store_true", default=False
+        )
+        parser.add_argument(
+            "--final_hidden_layer_dropout_rate", type=float, default=0.2
+        )
 
-        parser.add_argument('--activation', type=str, default="relu",
-                            help="activation function used for all activations in the network")
+        parser.add_argument(
+            "--activation",
+            type=str,
+            default="relu",
+            help="activation function used for all activations in the network",
+        )
 
         return parser
 
-    def __init__(self,
-                 # data
-                 num_tasks: int,
-                 aa_seq_len: int,
-                 aa_encoding_len: int,
-                 num_tokens: int,
-                 # convolutional model args
-                 use_embedding: bool = False,
-                 embedding_len: int = 64,
-                 num_conv_layers: int = 1,
-                 kernel_sizes: List[int] = (7,),
-                 out_channels: List[int] = (128,),
-                 dilations: List[int] = (1,),
-                 padding: str = "valid",
-                 use_conv_layer_norm: bool = False,
-                 conv_layer_norm_before_activation: bool = False,
-                 use_conv_layer_dropout: bool = False,
-                 conv_layer_dropout_rate: float = 0.2,
-                 # pooling
-                 global_average_pooling: bool = True,
-                 # prediction layers
-                 use_task_specific_layers: bool = False,
-                 task_specific_hidden_nodes: int = 64,
-                 use_final_hidden_layer: bool = False,
-                 final_hidden_size: int = 64,
-                 use_final_hidden_layer_norm: bool = False,
-                 final_hidden_layer_norm_before_activation: bool = False,
-                 use_final_hidden_layer_dropout: bool = False,
-                 final_hidden_layer_dropout_rate: float = 0.2,
-                 # activation function
-                 activation: str = "relu",
-                 *args, **kwargs):
+    def __init__(
+        self,
+        # data
+        num_tasks: int,
+        aa_seq_len: int,
+        aa_encoding_len: int,
+        num_tokens: int,
+        # convolutional model args
+        use_embedding: bool = False,
+        embedding_len: int = 64,
+        num_conv_layers: int = 1,
+        kernel_sizes: List[int] = (7,),
+        out_channels: List[int] = (128,),
+        dilations: List[int] = (1,),
+        padding: str = "valid",
+        use_conv_layer_norm: bool = False,
+        conv_layer_norm_before_activation: bool = False,
+        use_conv_layer_dropout: bool = False,
+        conv_layer_dropout_rate: float = 0.2,
+        # pooling
+        global_average_pooling: bool = True,
+        # prediction layers
+        use_task_specific_layers: bool = False,
+        task_specific_hidden_nodes: int = 64,
+        use_final_hidden_layer: bool = False,
+        final_hidden_size: int = 64,
+        use_final_hidden_layer_norm: bool = False,
+        final_hidden_layer_norm_before_activation: bool = False,
+        use_final_hidden_layer_dropout: bool = False,
+        final_hidden_layer_dropout_rate: float = 0.2,
+        # activation function
+        activation: str = "relu",
+        *args,
+        **kwargs,
+    ):
 
         super(ConvModel2, self).__init__()
 
@@ -867,7 +963,9 @@ class ConvModel2(nn.Module):
 
         # amino acid embedding
         if use_embedding:
-            layers["embedder"] = ScaledEmbedding(num_embeddings=num_tokens, embedding_dim=embedding_len, scale=False)
+            layers["embedder"] = ScaledEmbedding(
+                num_embeddings=num_tokens, embedding_dim=embedding_len, scale=False
+            )
 
         # transpose the input to match PyTorch's expected format
         layers["transpose"] = Transpose(dims=(1, 2))
@@ -884,17 +982,19 @@ class ConvModel2(nn.Module):
             else:
                 in_channels = out_channels[layer_num - 1]
 
-            layers[f"conv{layer_num}"] = ConvBlock(in_channels=in_channels,
-                                                   out_channels=out_channels[layer_num],
-                                                   kernel_size=kernel_sizes[layer_num],
-                                                   dilation=dilations[layer_num],
-                                                   padding=padding,
-                                                   use_batchnorm=False,
-                                                   use_layernorm=use_conv_layer_norm,
-                                                   norm_before_activation=conv_layer_norm_before_activation,
-                                                   use_dropout=use_conv_layer_dropout,
-                                                   dropout_rate=conv_layer_dropout_rate,
-                                                   activation=activation)
+            layers[f"conv{layer_num}"] = ConvBlock(
+                in_channels=in_channels,
+                out_channels=out_channels[layer_num],
+                kernel_size=kernel_sizes[layer_num],
+                dilation=dilations[layer_num],
+                padding=padding,
+                use_batchnorm=False,
+                use_layernorm=use_conv_layer_norm,
+                norm_before_activation=conv_layer_norm_before_activation,
+                use_dropout=use_conv_layer_dropout,
+                dropout_rate=conv_layer_dropout_rate,
+                activation=activation,
+            )
 
         # handle transition from convolutional layers to fully connected layer
         # either use global average pooling or flatten
@@ -913,11 +1013,15 @@ class ConvModel2(nn.Module):
             # and the number of input features for the prediction layers
             if padding == "valid":
                 # valid padding (aka no padding) results in shrinking length in progressive layers
-                conv_out_len = conv1d_out_shape(aa_seq_len, kernel_size=kernel_sizes[0], dilation=dilations[0])
+                conv_out_len = conv1d_out_shape(
+                    aa_seq_len, kernel_size=kernel_sizes[0], dilation=dilations[0]
+                )
                 for layer_num in range(1, num_conv_layers):
-                    conv_out_len = conv1d_out_shape(conv_out_len,
-                                                    kernel_size=kernel_sizes[layer_num],
-                                                    dilation=dilations[layer_num])
+                    conv_out_len = conv1d_out_shape(
+                        conv_out_len,
+                        kernel_size=kernel_sizes[layer_num],
+                        dilation=dilations[layer_num],
+                    )
                 pred_layer_input_features = conv_out_len * out_channels[-1]
             else:
                 # padding == "same"
@@ -925,25 +1029,33 @@ class ConvModel2(nn.Module):
 
         # prediction layer
         if use_task_specific_layers:
-            layers["prediction"] = TaskSpecificPredictionLayers(num_tasks=num_tasks,
-                                                                in_features=pred_layer_input_features,
-                                                                num_hidden_nodes=task_specific_hidden_nodes,
-                                                                activation=activation)
+            layers["prediction"] = TaskSpecificPredictionLayers(
+                num_tasks=num_tasks,
+                in_features=pred_layer_input_features,
+                num_hidden_nodes=task_specific_hidden_nodes,
+                activation=activation,
+            )
 
         # final hidden layer (with potential additional dropout)
         elif use_final_hidden_layer:
-            layers["fc1"] = FCBlock(in_features=pred_layer_input_features,
-                                    num_hidden_nodes=final_hidden_size,
-                                    use_batchnorm=False,
-                                    use_layernorm=use_final_hidden_layer_norm,
-                                    norm_before_activation=final_hidden_layer_norm_before_activation,
-                                    use_dropout=use_final_hidden_layer_dropout,
-                                    dropout_rate=final_hidden_layer_dropout_rate,
-                                    activation=activation)
-            layers["prediction"] = nn.Linear(in_features=final_hidden_size, out_features=num_tasks)
+            layers["fc1"] = FCBlock(
+                in_features=pred_layer_input_features,
+                num_hidden_nodes=final_hidden_size,
+                use_batchnorm=False,
+                use_layernorm=use_final_hidden_layer_norm,
+                norm_before_activation=final_hidden_layer_norm_before_activation,
+                use_dropout=use_final_hidden_layer_dropout,
+                dropout_rate=final_hidden_layer_dropout_rate,
+                activation=activation,
+            )
+            layers["prediction"] = nn.Linear(
+                in_features=final_hidden_size, out_features=num_tasks
+            )
 
         else:
-            layers["prediction"] = nn.Linear(in_features=pred_layer_input_features, out_features=num_tasks)
+            layers["prediction"] = nn.Linear(
+                in_features=pred_layer_input_features, out_features=num_tasks
+            )
 
         self.model = nn.Sequential(layers)
 
@@ -953,42 +1065,63 @@ class ConvModel2(nn.Module):
 
 
 class ConvModel(nn.Module):
-    """ a convolutional network with convolutional layers followed by a fully connected layer """
+    """a convolutional network with convolutional layers followed by a fully connected layer"""
 
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--num_conv_layers', type=int, default=1)
-        parser.add_argument('--kernel_sizes', type=int, nargs="+", default=[7])
-        parser.add_argument('--out_channels', type=int, nargs="+", default=[128])
-        parser.add_argument('--padding', type=str, default="valid", choices=["valid", "same"])
-        parser.add_argument('--use_final_hidden_layer', action="store_true",
-                            help="whether to use a final hidden layer")
-        parser.add_argument('--final_hidden_size', type=int, default=128,
-                            help="number of nodes in the final hidden layer")
-        parser.add_argument('--use_dropout', action="store_true",
-                            help="whether to use dropout in the final hidden layer")
-        parser.add_argument('--dropout_rate', type=float, default=0.2,
-                            help="dropout rate in the final hidden layer")
-        parser.add_argument('--use_task_specific_layers', action="store_true", default=False)
-        parser.add_argument('--task_specific_hidden_nodes', type=int, default=64)
+        parser.add_argument("--num_conv_layers", type=int, default=1)
+        parser.add_argument("--kernel_sizes", type=int, nargs="+", default=[7])
+        parser.add_argument("--out_channels", type=int, nargs="+", default=[128])
+        parser.add_argument(
+            "--padding", type=str, default="valid", choices=["valid", "same"]
+        )
+        parser.add_argument(
+            "--use_final_hidden_layer",
+            action="store_true",
+            help="whether to use a final hidden layer",
+        )
+        parser.add_argument(
+            "--final_hidden_size",
+            type=int,
+            default=128,
+            help="number of nodes in the final hidden layer",
+        )
+        parser.add_argument(
+            "--use_dropout",
+            action="store_true",
+            help="whether to use dropout in the final hidden layer",
+        )
+        parser.add_argument(
+            "--dropout_rate",
+            type=float,
+            default=0.2,
+            help="dropout rate in the final hidden layer",
+        )
+        parser.add_argument(
+            "--use_task_specific_layers", action="store_true", default=False
+        )
+        parser.add_argument("--task_specific_hidden_nodes", type=int, default=64)
         return parser
 
-    def __init__(self,
-                 num_tasks: int,
-                 aa_seq_len: int,
-                 aa_encoding_len: int,
-                 num_conv_layers: int = 1,
-                 kernel_sizes: List[int] = (7,),
-                 out_channels: List[int] = (128,),
-                 padding: str = "valid",
-                 use_final_hidden_layer: bool = True,
-                 final_hidden_size: int = 128,
-                 use_dropout: bool = False,
-                 dropout_rate: float = 0.2,
-                 use_task_specific_layers: bool = False,
-                 task_specific_hidden_nodes: int = 64,
-                 *args, **kwargs):
+    def __init__(
+        self,
+        num_tasks: int,
+        aa_seq_len: int,
+        aa_encoding_len: int,
+        num_conv_layers: int = 1,
+        kernel_sizes: List[int] = (7,),
+        out_channels: List[int] = (128,),
+        padding: str = "valid",
+        use_final_hidden_layer: bool = True,
+        final_hidden_size: int = 128,
+        use_dropout: bool = False,
+        dropout_rate: float = 0.2,
+        use_task_specific_layers: bool = False,
+        task_specific_hidden_nodes: int = 64,
+        *args,
+        **kwargs,
+    ):
 
         super(ConvModel, self).__init__()
 
@@ -999,14 +1132,18 @@ class ConvModel(nn.Module):
 
         for layer_num in range(num_conv_layers):
             # for the first convolutional layer, the in_channels is the feature_len
-            in_channels = aa_encoding_len if layer_num == 0 else out_channels[layer_num - 1]
+            in_channels = (
+                aa_encoding_len if layer_num == 0 else out_channels[layer_num - 1]
+            )
 
             layers["conv{}".format(layer_num)] = nn.Sequential(
-                nn.Conv1d(in_channels=in_channels,
-                          out_channels=out_channels[layer_num],
-                          kernel_size=kernel_sizes[layer_num],
-                          padding=padding),
-                nn.ReLU()
+                nn.Conv1d(
+                    in_channels=in_channels,
+                    out_channels=out_channels[layer_num],
+                    kernel_size=kernel_sizes[layer_num],
+                    padding=padding,
+                ),
+                nn.ReLU(),
             )
 
         layers["flatten"] = nn.Flatten()
@@ -1017,7 +1154,9 @@ class ConvModel(nn.Module):
             # valid padding (aka no padding) results in shrinking length in progressive layers
             conv_out_len = conv1d_out_shape(aa_seq_len, kernel_size=kernel_sizes[0])
             for layer_num in range(1, num_conv_layers):
-                conv_out_len = conv1d_out_shape(conv_out_len, kernel_size=kernel_sizes[layer_num])
+                conv_out_len = conv1d_out_shape(
+                    conv_out_len, kernel_size=kernel_sizes[layer_num]
+                )
             next_dim = conv_out_len * out_channels[-1]
         elif padding == "same":
             next_dim = aa_seq_len * out_channels[-1]
@@ -1026,21 +1165,27 @@ class ConvModel(nn.Module):
 
         # final hidden layer (with potential additional dropout)
         if use_final_hidden_layer:
-            layers["fc1"] = FCBlock(in_features=next_dim,
-                                    num_hidden_nodes=final_hidden_size,
-                                    use_batchnorm=False,
-                                    use_dropout=use_dropout,
-                                    dropout_rate=dropout_rate)
+            layers["fc1"] = FCBlock(
+                in_features=next_dim,
+                num_hidden_nodes=final_hidden_size,
+                use_batchnorm=False,
+                use_dropout=use_dropout,
+                dropout_rate=dropout_rate,
+            )
             next_dim = final_hidden_size
 
         # final prediction layer
         # either task specific nonlinear layers or a single linear layer
         if use_task_specific_layers:
-            layers["prediction"] = TaskSpecificPredictionLayers(num_tasks=num_tasks,
-                                                                in_features=next_dim,
-                                                                num_hidden_nodes=task_specific_hidden_nodes)
+            layers["prediction"] = TaskSpecificPredictionLayers(
+                num_tasks=num_tasks,
+                in_features=next_dim,
+                num_hidden_nodes=task_specific_hidden_nodes,
+            )
         else:
-            layers["prediction"] = nn.Linear(in_features=next_dim, out_features=num_tasks)
+            layers["prediction"] = nn.Linear(
+                in_features=next_dim, out_features=num_tasks
+            )
 
         self.model = nn.Sequential(layers)
 
@@ -1054,27 +1199,32 @@ class FCModel(nn.Module):
     @staticmethod
     def add_model_specific_args(parent_parser):
         parser = ArgumentParser(parents=[parent_parser], add_help=False)
-        parser.add_argument('--num_layers', type=int, default=1)
-        parser.add_argument('--num_hidden', nargs="+", type=int, default=[128])
-        parser.add_argument('--use_batchnorm', action="store_true", default=False)
-        parser.add_argument('--use_layernorm', action="store_true", default=False)
-        parser.add_argument('--norm_before_activation', action="store_true", default=False)
-        parser.add_argument('--use_dropout', action="store_true", default=False)
-        parser.add_argument('--dropout_rate', type=float, default=0.2)
+        parser.add_argument("--num_layers", type=int, default=1)
+        parser.add_argument("--num_hidden", nargs="+", type=int, default=[128])
+        parser.add_argument("--use_batchnorm", action="store_true", default=False)
+        parser.add_argument("--use_layernorm", action="store_true", default=False)
+        parser.add_argument(
+            "--norm_before_activation", action="store_true", default=False
+        )
+        parser.add_argument("--use_dropout", action="store_true", default=False)
+        parser.add_argument("--dropout_rate", type=float, default=0.2)
         return parser
 
-    def __init__(self,
-                 num_tasks: int,
-                 seq_encoding_len: int,
-                 num_layers: int = 1,
-                 num_hidden: List[int] = (128,),
-                 use_batchnorm: bool = False,
-                 use_layernorm: bool = False,
-                 norm_before_activation: bool = False,
-                 use_dropout: bool = False,
-                 dropout_rate: float = 0.2,
-                 activation: str = "relu",
-                 *args, **kwargs):
+    def __init__(
+        self,
+        num_tasks: int,
+        seq_encoding_len: int,
+        num_layers: int = 1,
+        num_hidden: List[int] = (128,),
+        use_batchnorm: bool = False,
+        use_layernorm: bool = False,
+        norm_before_activation: bool = False,
+        use_dropout: bool = False,
+        dropout_rate: float = 0.2,
+        activation: str = "relu",
+        *args,
+        **kwargs,
+    ):
         super().__init__()
 
         # set up the model as a Sequential block (less to do in forward())
@@ -1087,16 +1237,20 @@ class FCModel(nn.Module):
         for layer_num in range(num_layers):
             # for the first layer (layer_num == 0), in_features is determined by given input
             # for subsequent layers, the in_features is the previous layer's num_hidden
-            in_features = seq_encoding_len if layer_num == 0 else num_hidden[layer_num - 1]
+            in_features = (
+                seq_encoding_len if layer_num == 0 else num_hidden[layer_num - 1]
+            )
 
-            layers["fc{}".format(layer_num)] = FCBlock(in_features=in_features,
-                                                       num_hidden_nodes=num_hidden[layer_num],
-                                                       use_batchnorm=use_batchnorm,
-                                                       use_layernorm=use_layernorm,
-                                                       norm_before_activation=norm_before_activation,
-                                                       use_dropout=use_dropout,
-                                                       dropout_rate=dropout_rate,
-                                                       activation=activation)
+            layers["fc{}".format(layer_num)] = FCBlock(
+                in_features=in_features,
+                num_hidden_nodes=num_hidden[layer_num],
+                use_batchnorm=use_batchnorm,
+                use_layernorm=use_layernorm,
+                norm_before_activation=norm_before_activation,
+                use_dropout=use_dropout,
+                dropout_rate=dropout_rate,
+                activation=activation,
+            )
 
         # finally, the linear output layer
         in_features = num_hidden[-1] if num_layers > 0 else seq_encoding_len
@@ -1110,14 +1264,14 @@ class FCModel(nn.Module):
 
 
 class LRModel(nn.Module):
-    """ a simple linear model """
+    """a simple linear model"""
 
     def __init__(self, num_tasks, seq_encoding_len, *args, **kwargs):
         super().__init__()
 
         self.model = nn.Sequential(
-            nn.Flatten(),
-            nn.Linear(seq_encoding_len, out_features=num_tasks))
+            nn.Flatten(), nn.Linear(seq_encoding_len, out_features=num_tasks)
+        )
 
     def forward(self, x, **kwargs):
         output = self.model(x)
@@ -1125,7 +1279,7 @@ class LRModel(nn.Module):
 
 
 class TransferModel(nn.Module):
-    """ transfer learning model """
+    """transfer learning model"""
 
     @staticmethod
     def add_model_specific_args(parent_parser):
@@ -1136,21 +1290,34 @@ class TransferModel(nn.Module):
         p = ArgumentParser(parents=[parent_parser], add_help=False)
 
         # for model set up
-        p.add_argument('--pretrained_ckpt_path', type=str, default=None)
+        p.add_argument("--pretrained_ckpt_path", type=str, default=None)
 
         # where to cut off the backbone
-        p.add_argument("--backbone_cutoff", type=none_or_int, default=-1,
-                       help="where to cut off the backbone. can be a negative int, indexing back from "
-                            "pretrained_model.model.model. a value of -1 would chop off the backbone prediction head. "
-                            "a value of -2 chops the prediction head and FC layer. a value of -3 chops"
-                            "the above, as well as the global average pooling layer. all depends on architecture.")
+        p.add_argument(
+            "--backbone_cutoff",
+            type=none_or_int,
+            default=-1,
+            help="where to cut off the backbone. can be a negative int, indexing back from "
+            "pretrained_model.model.model. a value of -1 would chop off the backbone prediction head. "
+            "a value of -2 chops the prediction head and FC layer. a value of -3 chops"
+            "the above, as well as the global average pooling layer. all depends on architecture.",
+        )
 
-        p.add_argument("--pred_layer_input_features", type=int, default=None,
-                       help="if None, number of features will be determined based on backbone_cutoff and standard "
-                            "architecture. otherwise, specify the number of input features for the prediction layer")
+        p.add_argument(
+            "--pred_layer_input_features",
+            type=int,
+            default=None,
+            help="if None, number of features will be determined based on backbone_cutoff and standard "
+            "architecture. otherwise, specify the number of input features for the prediction layer",
+        )
 
         # top net args
-        p.add_argument("--top_net_type", type=str, default="linear", choices=["linear", "nonlinear", "sklearn"])
+        p.add_argument(
+            "--top_net_type",
+            type=str,
+            default="linear",
+            choices=["linear", "nonlinear", "sklearn"],
+        )
         p.add_argument("--top_net_hidden_nodes", type=int, default=256)
         p.add_argument("--top_net_use_batchnorm", action="store_true")
         p.add_argument("--top_net_use_dropout", action="store_true")
@@ -1158,25 +1325,30 @@ class TransferModel(nn.Module):
 
         return p
 
-    def __init__(self,
-                 # pretrained model
-                 pretrained_ckpt_path: Optional[str] = None,
-                 pretrained_hparams: Optional[dict] = None,
-                 backbone_cutoff: Optional[int] = -1,
-                 # top net
-                 pred_layer_input_features: Optional[int] = None,
-                 top_net_type: str = "linear",
-                 top_net_hidden_nodes: int = 256,
-                 top_net_use_batchnorm: bool = False,
-                 top_net_use_dropout: bool = False,
-                 top_net_dropout_rate: float = 0.1,
-                 *args, **kwargs):
+    def __init__(
+        self,
+        # pretrained model
+        pretrained_ckpt_path: Optional[str] = None,
+        pretrained_hparams: Optional[dict] = None,
+        backbone_cutoff: Optional[int] = -1,
+        # top net
+        pred_layer_input_features: Optional[int] = None,
+        top_net_type: str = "linear",
+        top_net_hidden_nodes: int = 256,
+        top_net_use_batchnorm: bool = False,
+        top_net_use_dropout: bool = False,
+        top_net_dropout_rate: float = 0.1,
+        *args,
+        **kwargs,
+    ):
 
         super().__init__()
 
         # error checking: if pretrained_ckpt_path is None, then pretrained_hparams must be specified
         if pretrained_ckpt_path is None and pretrained_hparams is None:
-            raise ValueError("Either pretrained_ckpt_path or pretrained_hparams must be specified")
+            raise ValueError(
+                "Either pretrained_ckpt_path or pretrained_hparams must be specified"
+            )
 
         # note: pdb_fns is loaded from transfer model arguments rather than original source model hparams
         # if pdb_fns is specified as a kwarg, pass it on for structure-based RPE
@@ -1195,19 +1367,27 @@ class TransferModel(nn.Module):
         if pretrained_hparams is not None:
             # pretrained_hparams will only be specified if we are loading from a DMSTask checkpoint
             pretrained_hparams["pdb_fns"] = pdb_fns
-            pretrained_model = Model[pretrained_hparams["model_name"]].cls(**pretrained_hparams)
+            pretrained_model = Model[pretrained_hparams["model_name"]].cls(
+                **pretrained_hparams
+            )
             self.pretrained_hparams = pretrained_hparams
         else:
             # not supported in metl-pretrained
-            raise NotImplementedError("Loading pretrained weights from RosettaTask checkpoint not supported")
+            raise NotImplementedError(
+                "Loading pretrained weights from RosettaTask checkpoint not supported"
+            )
 
         layers = collections.OrderedDict()
 
         # set the backbone to all layers except the last layer (the pre-trained prediction layer)
         if backbone_cutoff is None:
-            layers["backbone"] = SequentialWithArgs(*list(pretrained_model.model.children()))
+            layers["backbone"] = SequentialWithArgs(
+                *list(pretrained_model.model.children())
+            )
         else:
-            layers["backbone"] = SequentialWithArgs(*list(pretrained_model.model.children())[0:backbone_cutoff])
+            layers["backbone"] = SequentialWithArgs(
+                *list(pretrained_model.model.children())[0:backbone_cutoff]
+            )
 
         if top_net_type == "sklearn":
             # sklearn top not doesn't require any more layers, just return model for the repr layer
@@ -1227,29 +1407,39 @@ class TransferModel(nn.Module):
             elif backbone_cutoff == -2:
                 pred_layer_input_features = self.pretrained_hparams["embedding_len"]
             elif backbone_cutoff == -3:
-                pred_layer_input_features = self.pretrained_hparams["embedding_len"] * kwargs["aa_seq_len"]
+                pred_layer_input_features = (
+                    self.pretrained_hparams["embedding_len"] * kwargs["aa_seq_len"]
+                )
             else:
-                raise ValueError("can't automatically determine pred_layer_input_features for given backbone_cutoff")
+                raise ValueError(
+                    "can't automatically determine pred_layer_input_features for given backbone_cutoff"
+                )
 
         layers["flatten"] = nn.Flatten(start_dim=1)
 
         # create a new prediction layer on top of the backbone
         if top_net_type == "linear":
             # linear layer for prediction
-            layers["prediction"] = nn.Linear(in_features=pred_layer_input_features, out_features=1)
+            layers["prediction"] = nn.Linear(
+                in_features=pred_layer_input_features, out_features=1
+            )
         elif top_net_type == "nonlinear":
             # fully connected with hidden layer
-            fc_block = FCBlock(in_features=pred_layer_input_features,
-                               num_hidden_nodes=top_net_hidden_nodes,
-                               use_batchnorm=top_net_use_batchnorm,
-                               use_dropout=top_net_use_dropout,
-                               dropout_rate=top_net_dropout_rate)
+            fc_block = FCBlock(
+                in_features=pred_layer_input_features,
+                num_hidden_nodes=top_net_hidden_nodes,
+                use_batchnorm=top_net_use_batchnorm,
+                use_dropout=top_net_use_dropout,
+                dropout_rate=top_net_dropout_rate,
+            )
 
             pred_layer = nn.Linear(in_features=top_net_hidden_nodes, out_features=1)
 
             layers["prediction"] = SequentialWithArgs(fc_block, pred_layer)
         else:
-            raise ValueError("Unexpected type of top net layer: {}".format(top_net_type))
+            raise ValueError(
+                "Unexpected type of top net layer: {}".format(top_net_type)
+            )
 
         self.model = SequentialWithArgs(layers)
 
@@ -1295,9 +1485,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-## Relative attention
-
 """ implementation of transformer encoder with relative attention
     references:
         - https://medium.com/@_init_/how-self-attention-with-relative-position-representations-works-28173b8c245a
@@ -1306,36 +1493,23 @@ if __name__ == "__main__":
         - https://github.com/jiezouguihuafu/ClassicalModelreproduced/blob/main/Transformer/transfor_rpe.py
 """
 
-# import copy
-# from os.path import basename, dirname, join, isfile
-# from typing import Optional, Union
-
-# import torch
-# import torch.nn as nn
-# import torch.nn.functional as F
-# from torch import Tensor
-# from torch.nn import Linear, Dropout, LayerNorm
-# import time
-# import networkx as nx
-
-# import metl.structure as structure
-# import metl.models as models
-
 
 class RelativePosition3D(nn.Module):
-    """ Contact map-based relative position embeddings """
+    """Contact map-based relative position embeddings"""
 
     #  need to compute a bucket_mtx for each structure
     #  need to know which bucket_mtx to use when grabbing the embeddings in forward()
     #   - on init, get a list of all PDB files we will be using
     #   - use a dictionary to store PDB files --> bucket_mtxs
     #   - forward() gets a new arg: the pdb file, which indexes into the dictionary to grab the right bucket_mtx
-    def __init__(self,
-                 embedding_len: int,
-                 contact_threshold: int,
-                 clipping_threshold: int,
-                 pdb_fns: Optional[Union[str, list, tuple]] = None,
-                 default_pdb_dir: str = "data/pdb_files"):
+    def __init__(
+        self,
+        embedding_len: int,
+        contact_threshold: int,
+        clipping_threshold: int,
+        pdb_fns: Optional[Union[str, list, tuple]] = None,
+        default_pdb_dir: str = "data/pdb_files",
+    ):
 
         # preferably, pdb_fns contains full paths to the PDBs, but if just the PDB filename is given
         # then it defaults to the path data/pdb_files/<pdb_fn>
@@ -1389,9 +1563,10 @@ class RelativePosition3D(nn.Module):
         self.bucket_mtxs_device = device
 
     def _get_bucket_mtx(self, pdb_fn):
-        """ retrieve a bucket matrix given the pdb_fn.
-            if the pdb_fn was provided at init or has already been computed, then the bucket matrix will be
-            retrieved from the bucket_mtxs dictionary. else, it will be computed now on-the-fly """
+        """retrieve a bucket matrix given the pdb_fn.
+        if the pdb_fn was provided at init or has already been computed, then the bucket matrix will be
+        retrieved from the bucket_mtxs dictionary. else, it will be computed now on-the-fly
+        """
 
         # ensure that all the bucket matrices are on the same device as the nn.Embedding
         if self.bucket_mtxs_device != self.dummy_buffer.device:
@@ -1418,7 +1593,7 @@ class RelativePosition3D(nn.Module):
     #     self.register_buffer(self._pdb_key(pdb_fn), bucket_mtx, persistent=False)
 
     def _set_bucket_mtx(self, pdb_fn, bucket_mtx):
-        """ store a bucket matrix in the bucket dict """
+        """store a bucket matrix in the bucket dict"""
 
         # move the bucket_mtx to the same device that the other bucket matrices are on
         bucket_mtx = bucket_mtx.to(self.bucket_mtxs_device)
@@ -1427,7 +1602,7 @@ class RelativePosition3D(nn.Module):
 
     @staticmethod
     def _pdb_key(pdb_fn):
-        """ return a unique key for the given pdb_fn, used to map unique PDBs """
+        """return a unique key for the given pdb_fn, used to map unique PDBs"""
         # note this key does NOT currently support PDBs with the same basename but different paths
         # assumes every PDB is in the format <pdb_name>.pdb
         # should be a compatible with being a class attribute, as it is used as a pytorch buffer name
@@ -1451,7 +1626,7 @@ class RelativePosition3D(nn.Module):
         print("Initialized PDB bucket matrices in: {:.3f}".format(time.time() - start))
 
     def _init_pdb(self, pdb_fn):
-        """ process a pdb file for use with structure-based relative attention """
+        """process a pdb file for use with structure-based relative attention"""
         # if pdb_fn is not a full path, default to the path data/pdb_files/<pdb_fn>
         if dirname(pdb_fn) == "":
             # handle the case where the pdb file is in the current working directory
@@ -1469,11 +1644,13 @@ class RelativePosition3D(nn.Module):
         self._set_bucket_mtx(pdb_fn, bucket_mtx)
 
     def _compute_bucketed_neighbors(self, structure_graph, source_node):
-        """ gets the bucketed neighbors from the given source node and structure graph"""
+        """gets the bucketed neighbors from the given source node and structure graph"""
         if self.clipping_threshold < 0:
             raise ValueError("Clipping threshold must be >= 0")
 
-        sspl = _inv_dict(nx.single_source_shortest_path_length(structure_graph, source_node))
+        sspl = _inv_dict(
+            nx.single_source_shortest_path_length(structure_graph, source_node)
+        )
 
         if self.clipping_threshold is not None:
             num_buckets = 1 + self.clipping_threshold
@@ -1482,15 +1659,17 @@ class RelativePosition3D(nn.Module):
         return sspl
 
     def _compute_bucket_mtx(self, structure_graph):
-        """ get the bucket_mtx for the given structure_graph
-            calls _get_bucketed_neighbors for every node in the structure_graph """
+        """get the bucket_mtx for the given structure_graph
+        calls _get_bucketed_neighbors for every node in the structure_graph"""
         num_residues = len(list(structure_graph))
 
         # index into the embedding lookup table to create the final distance matrix
         bucket_mtx = torch.zeros(num_residues, num_residues, dtype=torch.long)
 
         for node_num in sorted(list(structure_graph)):
-            bucketed_neighbors = self._compute_bucketed_neighbors(structure_graph, node_num)
+            bucketed_neighbors = self._compute_bucketed_neighbors(
+                structure_graph, node_num
+            )
 
             for bucket_num, neighbors in bucketed_neighbors.items():
                 bucket_mtx[node_num, neighbors] = bucket_num
@@ -1499,10 +1678,11 @@ class RelativePosition3D(nn.Module):
 
 
 class RelativePosition(nn.Module):
-    """ creates the embedding lookup table E_r and computes R
-        note this inherits from pl.LightningModule instead of nn.Module
-        makes it easier to access the device with `self.device`
-        might be able to keep it as an nn.Module using the hacky dummy_param or commented out .device property """
+    """creates the embedding lookup table E_r and computes R
+    note this inherits from pl.LightningModule instead of nn.Module
+    makes it easier to access the device with `self.device`
+    might be able to keep it as an nn.Module using the hacky dummy_param or commented out .device property
+    """
 
     def __init__(self, embedding_len: int, clipping_threshold: int):
         """
@@ -1529,7 +1709,9 @@ class RelativePosition(nn.Module):
         # this sets up the standard sequence-based distance matrix for relative positions
         # the current position is 0, positions to the right are +1, +2, etc, and to the left -1, -2, etc
         distance_mat = range_vec_k[None, :] - range_vec_q[:, None]
-        distance_mat_clipped = torch.clamp(distance_mat, -self.clipping_threshold, self.clipping_threshold)
+        distance_mat_clipped = torch.clamp(
+            distance_mat, -self.clipping_threshold, self.clipping_threshold
+        )
 
         # convert to indices, indexing into the embedding table
         final_mat = (distance_mat_clipped + self.clipping_threshold).long()
@@ -1541,7 +1723,16 @@ class RelativePosition(nn.Module):
 
 
 class RelativeMultiHeadAttention(nn.Module):
-    def __init__(self, embed_dim, num_heads, dropout, pos_encoding, clipping_threshold, contact_threshold, pdb_fns):
+    def __init__(
+        self,
+        embed_dim,
+        num_heads,
+        dropout,
+        pos_encoding,
+        clipping_threshold,
+        contact_threshold,
+        pdb_fns,
+    ):
         """
         Multi-head attention with relative position embeddings.  Input data should be in batch_first format.
         :param embed_dim: aka d_model, aka hid_dim
@@ -1575,13 +1766,25 @@ class RelativeMultiHeadAttention(nn.Module):
         # Shaw et al. uses relative position information for both keys and values
         # Huang et al. only uses it for the keys, which is probably enough
         if pos_encoding == "relative":
-            self.relative_position_k = RelativePosition(self.head_dim, self.clipping_threshold)
-            self.relative_position_v = RelativePosition(self.head_dim, self.clipping_threshold)
+            self.relative_position_k = RelativePosition(
+                self.head_dim, self.clipping_threshold
+            )
+            self.relative_position_v = RelativePosition(
+                self.head_dim, self.clipping_threshold
+            )
         elif pos_encoding == "relative_3D":
-            self.relative_position_k = RelativePosition3D(self.head_dim, self.contact_threshold,
-                                                          self.clipping_threshold, self.pdb_fns)
-            self.relative_position_v = RelativePosition3D(self.head_dim, self.contact_threshold,
-                                                          self.clipping_threshold, self.pdb_fns)
+            self.relative_position_k = RelativePosition3D(
+                self.head_dim,
+                self.contact_threshold,
+                self.clipping_threshold,
+                self.pdb_fns,
+            )
+            self.relative_position_v = RelativePosition3D(
+                self.head_dim,
+                self.contact_threshold,
+                self.clipping_threshold,
+                self.pdb_fns,
+            )
         else:
             raise ValueError("unrecognized pos_encoding: {}".format(pos_encoding))
 
@@ -1604,30 +1807,38 @@ class RelativeMultiHeadAttention(nn.Module):
         # scaling factor for scaled dot product attention
         scale = torch.sqrt(torch.FloatTensor([self.head_dim]))
         # persistent=False if you don't want to save it inside state_dict
-        self.register_buffer('scale', scale)
+        self.register_buffer("scale", scale)
 
         # toggles meant to be set directly by user
         self.need_weights = False
         self.average_attn_weights = True
 
     def _compute_attn_weights(self, query, key, len_q, len_k, batch_size, mask, pdb_fn):
-        """ computes the attention weights (a "compatability function" of queries with corresponding keys) """
+        """computes the attention weights (a "compatability function" of queries with corresponding keys)"""
 
         # calculate the first term in the numerator attn1, which is Q*K
         # todo: pytorch reshapes q,k and v to 3 dimensions (similar to how r_q2 is below)
         #   is that functionally equivalent to what we're doing? is their way faster?
         # r_q1 = [batch_size, num_heads, len_q, head_dim]
-        r_q1 = query.view(batch_size, len_q, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+        r_q1 = query.view(batch_size, len_q, self.num_heads, self.head_dim).permute(
+            0, 2, 1, 3
+        )
         # todo: we could directly permute r_k1 to [batch_size, num_heads, head_dim, len_k]
         #   to make it compatible for matrix multiplication with r_q1, instead of 2-step approach
         # r_k1 = [batch_size, num_heads, len_k, head_dim]
-        r_k1 = key.view(batch_size, len_k, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+        r_k1 = key.view(batch_size, len_k, self.num_heads, self.head_dim).permute(
+            0, 2, 1, 3
+        )
         # attn1 = [batch_size, num_heads, len_q, len_k]
         attn1 = torch.matmul(r_q1, r_k1.permute(0, 1, 3, 2))
 
         # calculate the second term in the numerator attn2, which is Q*R
         # r_q2 = [query_len, batch_size * num_heads, head_dim]
-        r_q2 = query.permute(1, 0, 2).contiguous().view(len_q, batch_size * self.num_heads, self.head_dim)
+        r_q2 = (
+            query.permute(1, 0, 2)
+            .contiguous()
+            .view(len_q, batch_size * self.num_heads, self.head_dim)
+        )
 
         # todo: support multiple different PDB base structures per batch
         #   one option:
@@ -1640,7 +1851,7 @@ class RelativeMultiHeadAttention(nn.Module):
         #       - note: if there are a lot of of different structures, and the sequence lengths are long,
         #               this could be memory prohibitive because R (rel_pos_k) can take up a lot of mem for long seqs
         #       - adjust the attn2 calculation to factor in the multiple different R matrices.
-        #               the way to do this might have to be to do multiple matmuls, one for each each structure.
+        #               the way to do this might have to be to do multiple matmuls, one for each each
         #               basically, would split up r_q2 into several matrices grouped by structure, and then
         #               multiply with corresponding R, then combine back into the exact same order of the original r_q2
         #               note: this may be computationally intensive (splitting, more matrix muliplies, joining)
@@ -1679,11 +1890,15 @@ class RelativeMultiHeadAttention(nn.Module):
 
         return attn_weights
 
-    def _compute_avg_val(self, value, len_q, len_k, len_v, attn_weights, batch_size, pdb_fn):
+    def _compute_avg_val(
+        self, value, len_q, len_k, len_v, attn_weights, batch_size, pdb_fn
+    ):
         # todo: add option to not factor in relative position embeddings in value calculation
         # calculate the first term, the attn*values
         # r_v1 = [batch_size, num_heads, len_v, head_dim]
-        r_v1 = value.view(batch_size, len_v, self.num_heads, self.head_dim).permute(0, 2, 1, 3)
+        r_v1 = value.view(batch_size, len_v, self.num_heads, self.head_dim).permute(
+            0, 2, 1, 3
+        )
         # avg1 = [batch_size, num_heads, len_q, head_dim]
         avg1 = torch.matmul(attn_weights, r_v1)
 
@@ -1699,14 +1914,24 @@ class RelativeMultiHeadAttention(nn.Module):
             raise ValueError("unrecognized pos_encoding: {}".format(self.pos_encoding))
 
         # r_attn_weights = [len_q, batch_size * num_heads, len_v]
-        r_attn_weights = attn_weights.permute(2, 0, 1, 3).contiguous().view(len_q, batch_size * self.num_heads, len_k)
+        r_attn_weights = (
+            attn_weights.permute(2, 0, 1, 3)
+            .contiguous()
+            .view(len_q, batch_size * self.num_heads, len_k)
+        )
         avg2 = torch.matmul(r_attn_weights, rel_pos_v)
         # avg2 = [batch_size, num_heads, len_q, head_dim]
-        avg2 = avg2.transpose(0, 1).contiguous().view(batch_size, self.num_heads, len_q, self.head_dim)
+        avg2 = (
+            avg2.transpose(0, 1)
+            .contiguous()
+            .view(batch_size, self.num_heads, len_q, self.head_dim)
+        )
 
         # calculate avg value
         x = avg1 + avg2  # [batch_size, num_heads, len_q, head_dim]
-        x = x.permute(0, 2, 1, 3).contiguous()  # [batch_size, len_q, num_heads, head_dim]
+        x = x.permute(
+            0, 2, 1, 3
+        ).contiguous()  # [batch_size, len_q, num_heads, head_dim]
         # x = [batch_size, len_q, embed_dim]
         x = x.view(batch_size, len_q, self.embed_dim)
 
@@ -1726,10 +1951,14 @@ class RelativeMultiHeadAttention(nn.Module):
 
         # first compute the attention weights, then multiply with values
         # attn = [batch size, num_heads, len_q, len_k]
-        attn_weights = self._compute_attn_weights(query, key, len_q, len_k, batch_size, mask, pdb_fn)
+        attn_weights = self._compute_attn_weights(
+            query, key, len_q, len_k, batch_size, mask, pdb_fn
+        )
 
         # take weighted average of values (weighted by attention weights)
-        attn_output = self._compute_avg_val(value, len_q, len_k, len_v, attn_weights, batch_size, pdb_fn)
+        attn_output = self._compute_avg_val(
+            value, len_q, len_k, len_v, attn_weights, batch_size, pdb_fn
+        )
 
         # output projection
         # attn_output = [batch_size, len_q, embed_dim]
@@ -1761,27 +1990,36 @@ class RelativeTransformerEncoderLayer(nn.Module):
     """
 
     # this is some kind of torch jit compiling helper... will also ensure these values don't change
-    __constants__ = ['batch_first', 'norm_first']
+    __constants__ = ["batch_first", "norm_first"]
 
-    def __init__(self,
-                 d_model,
-                 nhead,
-                 pos_encoding="relative",
-                 clipping_threshold=3,
-                 contact_threshold=7,
-                 pdb_fns=None,
-                 dim_feedforward=2048,
-                 dropout=0.1,
-                 activation=F.relu,
-                 layer_norm_eps=1e-5,
-                 norm_first=False) -> None:
+    def __init__(
+        self,
+        d_model,
+        nhead,
+        pos_encoding="relative",
+        clipping_threshold=3,
+        contact_threshold=7,
+        pdb_fns=None,
+        dim_feedforward=2048,
+        dropout=0.1,
+        activation=F.relu,
+        layer_norm_eps=1e-5,
+        norm_first=False,
+    ) -> None:
 
         self.batch_first = True
 
         super(RelativeTransformerEncoderLayer, self).__init__()
 
-        self.self_attn = RelativeMultiHeadAttention(d_model, nhead, dropout,
-                                                    pos_encoding, clipping_threshold, contact_threshold, pdb_fns)
+        self.self_attn = RelativeMultiHeadAttention(
+            d_model,
+            nhead,
+            dropout,
+            pos_encoding,
+            clipping_threshold,
+            contact_threshold,
+            pdb_fns,
+        )
 
         # feed forward model
         self.linear1 = Linear(d_model, dim_feedforward)
@@ -1857,7 +2095,7 @@ def _get_clones(module, num_clones):
 
 
 def _inv_dict(d):
-    """ helper function for contact map-based position embeddings """
+    """helper function for contact map-based position embeddings"""
     inv = dict()
     for k, v in d.items():
         # collect dict keys into lists based on value
@@ -1869,9 +2107,10 @@ def _inv_dict(d):
 
 
 def _combine_d(d, threshold, combined_key):
-    """ helper function for contact map-based position embeddings
-        d is a dictionary with ints as keys and lists as values.
-        for all keys >= threshold, this function combines the values of those keys into a single list """
+    """helper function for contact map-based position embeddings
+    d is a dictionary with ints as keys and lists as values.
+    for all keys >= threshold, this function combines the values of those keys into a single list
+    """
     out_d = {}
     for k, v in d.items():
         if k < threshold:
@@ -1885,17 +2124,6 @@ def _combine_d(d, threshold, combined_key):
         out_d[combined_key] = sorted(out_d[combined_key])
     return out_d
 
-### structure
-
-# import os
-# from os.path import isfile
-# from enum import Enum, auto
-
-# import numpy as np
-# from scipy.spatial.distance import cdist
-# import networkx as nx
-# from biopandas.pdb import PandasPdb
-
 
 class GraphType(Enum):
     LINEAR = auto()
@@ -1906,18 +2134,18 @@ class GraphType(Enum):
 
 
 def save_graph(g, fn):
-    """ Saves graph to file """
+    """Saves graph to file"""
     nx.write_gexf(g, fn)
 
 
 def load_graph(fn):
-    """ Loads graph from file """
+    """Loads graph from file"""
     g = nx.read_gexf(fn, node_type=int)
     return g
 
 
 def shuffle_nodes(g, seed=7):
-    """ Shuffles the nodes of the given graph and returns a copy of the shuffled graph """
+    """Shuffles the nodes of the given graph and returns a copy of the shuffled graph"""
     # get the list of nodes in this graph
     nodes = g.nodes()
 
@@ -1934,16 +2162,16 @@ def shuffle_nodes(g, seed=7):
 
 
 def linear_graph(num_residues):
-    """ Creates a linear graph where each node is connected to its sequence neighbor in order """
+    """Creates a linear graph where each node is connected to its sequence neighbor in order"""
     g = nx.Graph()
     g.add_nodes_from(np.arange(0, num_residues))
-    for i in range(num_residues-1):
-        g.add_edge(i, i+1)
+    for i in range(num_residues - 1):
+        g.add_edge(i, i + 1)
     return g
 
 
 def complete_graph(num_residues):
-    """ Creates a graph where each node is connected to all other nodes"""
+    """Creates a graph where each node is connected to all other nodes"""
     g = nx.complete_graph(num_residues)
     return g
 
@@ -1955,7 +2183,7 @@ def disconnected_graph(num_residues):
 
 
 def dist_thresh_graph(dist_mtx, threshold):
-    """ Creates undirected graph based on a distance threshold """
+    """Creates undirected graph based on a distance threshold"""
     g = nx.Graph()
     g.add_nodes_from(np.arange(0, dist_mtx.shape[0]))
 
@@ -1973,7 +2201,7 @@ def dist_thresh_graph(dist_mtx, threshold):
 
 
 def ordered_adjacency_matrix(g):
-    """ returns the adjacency matrix ordered by node label in increasing order as a numpy array """
+    """returns the adjacency matrix ordered by node label in increasing order as a numpy array"""
     node_order = sorted(g.nodes())
     adj_mtx = nx.to_numpy_matrix(g, nodelist=node_order)
     return np.asarray(adj_mtx).astype(np.float32)
@@ -1999,7 +2227,7 @@ def cbeta_distance_matrix(pdb_fn, start=0, end=None):
     for i, (residue_number, values) in enumerate(grouped):
 
         # skip residues not in the range
-        end_index = (len(grouped) if end is None else end)
+        end_index = len(grouped) if end is None else end
         if i not in range(start, end_index):
             continue
 
@@ -2013,11 +2241,16 @@ def cbeta_distance_matrix(pdb_fn, start=0, end=None):
             # print("Using CA...")
             atom_name = "CA"
         else:
-            raise ValueError("Couldn't find CB or CA for residue {}".format(residue_number))
+            raise ValueError(
+                "Couldn't find CB or CA for residue {}".format(residue_number)
+            )
 
         # get the coordinates of cbeta (or calpha)
         coords.append(
-            residue_group[residue_group["atom_name"] == atom_name][["x_coord", "y_coord", "z_coord"]].values[0])
+            residue_group[residue_group["atom_name"] == atom_name][
+                ["x_coord", "y_coord", "z_coord"]
+            ].values[0]
+        )
 
     # stack the coords into a numpy array where each row has the x,y,z coords for a different residue
     coords = np.stack(coords)
@@ -2027,16 +2260,24 @@ def cbeta_distance_matrix(pdb_fn, start=0, end=None):
 
     return dist_mtx
 
+
 def get_neighbors(g, nodes):
-    """ returns a list (set) of neighbors of all given nodes """
+    """returns a list (set) of neighbors of all given nodes"""
     neighbors = set()
     for n in nodes:
         neighbors.update(g.neighbors(n))
     return sorted(list(neighbors))
 
 
-def gen_graph(graph_type, res_dist_mtx, dist_thresh=7, shuffle_seed=7, graph_save_dir=None, save=False):
-    """ generate the specified structure graph using the specified residue distance matrix """
+def gen_graph(
+    graph_type,
+    res_dist_mtx,
+    dist_thresh=7,
+    shuffle_seed=7,
+    graph_save_dir=None,
+    save=False,
+):
+    """generate the specified structure graph using the specified residue distance matrix"""
     if graph_type is GraphType.LINEAR:
         g = linear_graph(len(res_dist_mtx))
         save_fn = None if not save else os.path.join(graph_save_dir, "linear.graph")
@@ -2047,31 +2288,51 @@ def gen_graph(graph_type, res_dist_mtx, dist_thresh=7, shuffle_seed=7, graph_sav
 
     elif graph_type is GraphType.DISCONNECTED:
         g = disconnected_graph(len(res_dist_mtx))
-        save_fn = None if not save else os.path.join(graph_save_dir, "disconnected.graph")
+        save_fn = (
+            None if not save else os.path.join(graph_save_dir, "disconnected.graph")
+        )
 
     elif graph_type is GraphType.DIST_THRESH:
         g = dist_thresh_graph(res_dist_mtx, dist_thresh)
-        save_fn = None if not save else os.path.join(graph_save_dir, "dist_thresh_{}.graph".format(dist_thresh))
+        save_fn = (
+            None
+            if not save
+            else os.path.join(
+                graph_save_dir, "dist_thresh_{}.graph".format(dist_thresh)
+            )
+        )
 
     elif graph_type is GraphType.DIST_THRESH_SHUFFLED:
         g = dist_thresh_graph(res_dist_mtx, dist_thresh)
         g = shuffle_nodes(g, seed=shuffle_seed)
-        save_fn = None if not save else \
-            os.path.join(graph_save_dir, "dist_thresh_{}_shuffled_r{}.graph".format(dist_thresh, shuffle_seed))
+        save_fn = (
+            None
+            if not save
+            else os.path.join(
+                graph_save_dir,
+                "dist_thresh_{}_shuffled_r{}.graph".format(dist_thresh, shuffle_seed),
+            )
+        )
 
     else:
         raise ValueError("Graph type {} is not implemented".format(graph_type))
 
     if save:
         if isfile(save_fn):
-            print("err: graph already exists: {}. to overwrite, delete the existing file first".format(save_fn))
+            print(
+                "err: graph already exists: {}. to overwrite, delete the existing file first".format(
+                    save_fn
+                )
+            )
         else:
             os.makedirs(graph_save_dir, exist_ok=True)
             save_graph(g, save_fn)
 
     return g
 
+
 # Huggingface code
+
 
 class METLConfig(PretrainedConfig):
     IDENT_UUID_MAP = IDENT_UUID_MAP
@@ -2079,29 +2340,33 @@ class METLConfig(PretrainedConfig):
     model_type = "METL"
 
     def __init__(
-            self,
-            id:str = None,
-            **kwargs,
+        self,
+        id: str = None,
+        **kwargs,
     ):
         self.id = id
         super().__init__(**kwargs)
 
+
 class METLModel(PreTrainedModel):
     config_class = METLConfig
-    def __init__(self, config:METLConfig):
+
+    def __init__(self, config: METLConfig):
         super().__init__(config)
         self.model = None
         self.encoder = None
         self.config = config
-        
+
     def forward(self, X, pdb_fn=None):
         if pdb_fn:
             return self.model(X, pdb_fn=pdb_fn)
         return self.model(X)
-    
+
     def load_from_uuid(self, id):
         if id:
-            assert id in self.config.UUID_URL_MAP, "ID given does not reference a valid METL model in the IDENT_UUID_MAP"
+            assert (
+                id in self.config.UUID_URL_MAP
+            ), "ID given does not reference a valid METL model in the IDENT_UUID_MAP"
             self.config.id = id
 
         self.model, self.encoder = get_from_uuid(self.config.id)
@@ -2109,7 +2374,9 @@ class METLModel(PreTrainedModel):
     def load_from_ident(self, id):
         if id:
             id = id.lower()
-            assert id in self.config.IDENT_UUID_MAP, "ID given does not reference a valid METL model in the IDENT_UUID_MAP"
+            assert (
+                id in self.config.IDENT_UUID_MAP
+            ), "ID given does not reference a valid METL model in the IDENT_UUID_MAP"
             self.config.id = id
 
         self.model, self.encoder = get_from_ident(self.config.id)

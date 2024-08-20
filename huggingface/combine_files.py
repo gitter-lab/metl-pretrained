@@ -6,7 +6,7 @@ def main(output_path: str):
     code = []
     metl_imports = set()
     for file in os.listdir('./metl'):
-        if '.py' in file and '_.py' not in file:
+        if '.py' in file and '_.py' not in file and 'test' not in file:
             with open(f'./metl/{file}', 'r') as f:
                 file_text = f.readlines()
                 for line in file_text:
