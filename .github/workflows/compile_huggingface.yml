@@ -9,6 +9,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: 'huggingface_support'
+      - name: installing deps
+        run: pip install -r huggingface/requirements.txt
       - name: Combining Files
         run: python huggingface/combine_files.py -o huggingface/huggingface_wrapper.py
       - name: Push to hub
