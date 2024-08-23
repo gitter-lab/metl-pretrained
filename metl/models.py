@@ -4,6 +4,8 @@ from argparse import ArgumentParser
 import enum
 from os.path import isfile
 from typing import List, Tuple, Optional
+from biopandas.pdb import PandasPdb
+import os
 
 import torch
 import torch.nn as nn
@@ -34,14 +36,31 @@ def reset_parameters_helper(m: nn.Module):
 
 class SequentialWithArgs(nn.Sequential):
     def forward(self, x, **kwargs):
+        if not isinstance(x, torch.Tensor):
+            x = torch.Tensor(x)
+        
         for module in self:
             if isinstance(module, ra.RelativeTransformerEncoder) or isinstance(module, SequentialWithArgs):
                 # for relative transformer encoders, pass in kwargs (pdb_fn)
+                if 'pdb_fn' not in kwargs:
+                    raise Exception('The model loaded requires the PDB function kwarg.')
+                
+                kwargs['pdb_fn'] = os.path.abspath(kwargs['pdb_fn'])
+
+                self.validate_pdb(kwargs['pdb_fn'])
+
+                # ppdb = PandasPdb().read_pdb()
                 x = module(x, **kwargs)
             else:
                 # for all modules, don't pass in kwargs
                 x = module(x)
         return x
+    
+    def validate_pdb(self, pdb_fn):
+        ppdb = PandasPdb().read_pdb(pdb_fn)
+    
+    def validate_protein_seq(self):
+        pass
 
 
 class PositionalEncoding(nn.Module):
