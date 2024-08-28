@@ -1,3 +1,11 @@
+"""
+This script combines all of the files in the metl directory into one file so that it can be uploaded automatically to huggingface.
+
+Files ending with _.py and that contain test in the filename will not be included. This script automatically generates the required imports from the files as well.
+
+Regardless of changes to metl, as long as necessary files that may be added don't contain test or _.py, this should work as intended.
+"""
+
 import argparse
 import os
 

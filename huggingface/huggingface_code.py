@@ -1,3 +1,10 @@
+"""
+This file contains the actual wrapper for METL. 
+Above the delimiter for this file: #$> we have included imports and shell functions 
+which prevent python (and other linters) from complaining this file has erros. 
+"""
+
+
 from transformers import PretrainedConfig, PreTrainedModel
 
 def get_from_uuid():

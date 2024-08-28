@@ -1,3 +1,7 @@
+"""
+This is an example wrapper after running the script combine_files. This is NOT the version on huggingface. That gets compiled live after ever PR or push to main.
+"""
+
 import collections
 import copy
 import enum

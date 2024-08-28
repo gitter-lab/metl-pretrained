@@ -1,3 +1,9 @@
+"""
+Utility script for generating a list that can be pasted into the google colab when more models are uploaded to zenodo and added to the METL IDENT_UUID_MAP.
+
+This pulls from huggingface, so wait for that action to finish first before running this script and uploading the colab notebook.
+"""
+
 from transformers import AutoModel
 
 def main():
