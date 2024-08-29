@@ -1,0 +1,24 @@
+name: Compiling Huggingface Wrapper
+on: [push, workflow_dispatch]
+jobs:
+  Combine-File:
+    runs-on: ubuntu-latest
+    env: 
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: 'main'
+      - name: installing deps
+        run: pip install -r huggingface/requirements.txt
+      - name: installing torch cpu only
+        run: pip install torch==2.1.0 --index-url https://download.pytorch.org/whl/cpu
+      - name: Combining Files
+        run: python huggingface/combine_files.py -o huggingface/huggingface_wrapper.py
+      - name: Formatting generated code
+        run: | 
+          python -m isort huggingface/huggingface_wrapper.py 
+          python -m black huggingface/huggingface_wrapper.py
+      - name: Push to hub
+        run: python huggingface/push_to_hub.py
+        
