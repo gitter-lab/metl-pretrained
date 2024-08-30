@@ -3,6 +3,7 @@ import torch.hub
 
 import metl.models as models
 from metl.encode import DataEncoder, Encoding
+from metl.model_encoder import ModelEncoder
 
 UUID_URL_MAP = {
     # global source models
@@ -106,34 +107,37 @@ def _get_data_encoding(hparams):
     return encoding
 
 
-def load_model_and_data_encoder(state_dict, hparams):
+def load_model_and_data_encoder(state_dict, hparams, strict, raw, indexing):
     model = models.Model[hparams["model_name"]].cls(**hparams)
     model.load_state_dict(state_dict)
 
     data_encoder = DataEncoder(_get_data_encoding(hparams))
 
-    return model, data_encoder
+    if raw:
+        return model, data_encoder
+    else:
+        return ModelEncoder(model, data_encoder, strict, indexing)
 
 
-def get_from_uuid(uuid):
+def get_from_uuid(uuid, strict=True, raw=False, indexing=0):
     if uuid in UUID_URL_MAP:
         state_dict, hparams = download_checkpoint(uuid)
-        return load_model_and_data_encoder(state_dict, hparams)
+        return load_model_and_data_encoder(state_dict, hparams, strict, raw, indexing)
     else:
         raise ValueError(f"UUID {uuid} not found in UUID_URL_MAP")
 
 
-def get_from_ident(ident):
+def get_from_ident(ident, strict=True, raw=False, indexing=0):
     ident = ident.lower()
     if ident in IDENT_UUID_MAP:
         state_dict, hparams = download_checkpoint(IDENT_UUID_MAP[ident])
-        return load_model_and_data_encoder(state_dict, hparams)
+        return load_model_and_data_encoder(state_dict, hparams, strict, raw, indexing)
     else:
         raise ValueError(f"Identifier {ident} not found in IDENT_UUID_MAP")
 
 
-def get_from_checkpoint(ckpt_fn):
+def get_from_checkpoint(ckpt_fn, strict=False, raw=False, indexing=0):
     ckpt = torch.load(ckpt_fn, map_location="cpu")
     state_dict = ckpt["state_dict"]
     hyper_parameters = ckpt["hyper_parameters"]
-    return load_model_and_data_encoder(state_dict, hyper_parameters)
+    return load_model_and_data_encoder(state_dict, hyper_parameters, strict, raw, indexing)

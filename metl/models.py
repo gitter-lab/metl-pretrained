@@ -42,27 +42,12 @@ class SequentialWithArgs(nn.Sequential):
         for module in self:
             if isinstance(module, ra.RelativeTransformerEncoder) or isinstance(module, SequentialWithArgs):
                 # for relative transformer encoders, pass in kwargs (pdb_fn)
-                if 'pdb_fn' not in kwargs:
-                    raise Exception('The model loaded requires the PDB function kwarg.')
-                
-                kwargs['pdb_fn'] = os.path.abspath(kwargs['pdb_fn'])
-
-                self.validate_pdb(kwargs['pdb_fn'])
-
-                # ppdb = PandasPdb().read_pdb()
                 x = module(x, **kwargs)
             else:
                 # for all modules, don't pass in kwargs
                 x = module(x)
         return x
     
-    def validate_pdb(self, pdb_fn):
-        ppdb = PandasPdb().read_pdb(pdb_fn)
-    
-    def validate_protein_seq(self):
-        pass
-
-
 class PositionalEncoding(nn.Module):
     # originally from https://pytorch.org/tutorials/beginner/transformer_tutorial.html
     # they have since updated their implementation, but it is functionally equivalent
