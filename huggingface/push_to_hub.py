@@ -1,6 +1,6 @@
 """
 Basic minimal script for uploading the generated file from combine_files.py onto huggingface. 
-Requires the action to have access to the HF_TOKEN secret. 
+Requires the action to have access to the HF_TOKEN secret in the repository. 
 """
 
 from huggingface_wrapper import METLConfig, METLModel
