@@ -17,8 +17,8 @@ jobs:
         run: python huggingface/combine_files.py -o huggingface/huggingface_wrapper.py
       - name: Formatting generated code
         run: | 
-          python -m isort huggingface/huggingface_wrapper.py 
           python -m black huggingface/huggingface_wrapper.py
+          python -m isort huggingface/huggingface_wrapper.py 
       - name: Push to hub
         run: python huggingface/push_to_hub.py
         
