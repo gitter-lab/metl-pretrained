@@ -4,8 +4,6 @@ from argparse import ArgumentParser
 import enum
 from os.path import isfile
 from typing import List, Tuple, Optional
-from biopandas.pdb import PandasPdb
-import os
 
 import torch
 import torch.nn as nn

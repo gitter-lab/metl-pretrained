@@ -29,6 +29,11 @@ class ModelEncoder(torch.nn.Module):
         return False
 
     def validate_pdb(self, pdb_file, wt):
+        """
+        When validating a PDB, it is possible that the PDB file and wild type (wt) passed will differ. 
+        Strict raises an exception if this occurs, otherwise this potential error is not checked.
+        Strict is off by default when loading from a checkpoint file, and on when loading models from Zenodo.
+        """
         try:
             ppdb = PandasPdb().read_pdb(pdb_file)
         except Exception as e:
@@ -41,11 +46,14 @@ class ModelEncoder(torch.nn.Module):
         wildtype = ''.join(wt_seq)
 
         if self.strict:
-            err_str = "Strict mode is on because a METL model that we trained was used. Wildtype and PDB sequeunces must match."
-            err_str += " If this is expected behavior, pass strict=False to the load function you used."
+            err_str = "Strict mode is on because a METL model that we trained was used. Wildtype and PDB sequences must match."
+            err_str += " To ignore the sequence mismatch, pass strict=False to the load function you used."
             assert wildtype == wt, err_str
 
     def validate_variants(self, variants, wt):
+        """
+        Variants much be validated only after conversion to 0 based!
+        """
         wt_len = len(wt)
         for index, variant in enumerate(variants):
             split = variant.split(',')
@@ -60,8 +68,7 @@ class ModelEncoder(torch.nn.Module):
                     error_str = f"The position for the mutation is {location} but it needs to be between 0 "
                     error_str += f"and {len(wt)-1} if 0-based and 1 and {len(wt)} if 1-based."
                     errors.append(error_str)
-        
-                if wt[location] != from_amino_acid:
+                elif wt[location] != from_amino_acid:
                     errors.append(f"Wildtype at position {location} is {wt[location]} but variant had {from_amino_acid}. Check the variant input.")
 
                 if len(errors) != 0:

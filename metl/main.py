@@ -108,6 +108,11 @@ def _get_data_encoding(hparams):
 
 
 def load_model_and_data_encoder(state_dict, hparams, strict, raw, indexing):
+    """
+    Passing raw to this function dictates that the un-wrapped and unsafe version of the model and data encoder should be returned.
+    These are what is saved onto zenodo. Strict decides how certain errors are handled. See ModelEncoder.validate_pdb for more detail.
+    Indexing sets the expected index style of mutations passed into METL for predictions.
+    """
     model = models.Model[hparams["model_name"]].cls(**hparams)
     model.load_state_dict(state_dict)
 
@@ -120,6 +125,13 @@ def load_model_and_data_encoder(state_dict, hparams, strict, raw, indexing):
 
 
 def get_from_uuid(uuid, strict=True, raw=False, indexing=0):
+    """
+    Strict is True here as models loaded from zenodo have matching PDB and wild types.
+
+    Indexing is 0, as that is the default for METL. raw is always false by default as the preferred way to
+    use METL (as an end-user) is with error handling enabled. 
+    """
+
     if uuid in UUID_URL_MAP:
         state_dict, hparams = download_checkpoint(uuid)
         return load_model_and_data_encoder(state_dict, hparams, strict, raw, indexing)
@@ -128,6 +140,13 @@ def get_from_uuid(uuid, strict=True, raw=False, indexing=0):
 
 
 def get_from_ident(ident, strict=True, raw=False, indexing=0):
+    """
+    Strict is True here as models loaded from zenodo have matching PDB and wild types.
+
+    Indexing is 0, as that is the default for METL. raw is always false by default as the preferred way to
+    use METL (as an end-user) is with error handling enabled. 
+    """
+
     ident = ident.lower()
     if ident in IDENT_UUID_MAP:
         state_dict, hparams = download_checkpoint(IDENT_UUID_MAP[ident])
@@ -137,6 +156,14 @@ def get_from_ident(ident, strict=True, raw=False, indexing=0):
 
 
 def get_from_checkpoint(ckpt_fn, strict=False, raw=False, indexing=0):
+    """
+    Strict is False here as checkpoint models are assumed to be fine-tuned, 
+    and custom PDBs that don't exactly match the wild type may be more common here.
+
+    Indexing is 0, as that is the default for METL. raw is always false by default as the preferred way to
+    use METL (as an end-user) is with error handling enabled. 
+    """
+    
     ckpt = torch.load(ckpt_fn, map_location="cpu")
     state_dict = ckpt["state_dict"]
     hyper_parameters = ckpt["hyper_parameters"]
