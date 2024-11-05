@@ -3,7 +3,7 @@ import torch
 
 
 def main():
-    model, data_encoder = metl.get_from_ident("metl-g-20m-1d")
+    model, data_encoder = metl.get_from_ident("metl-g-20m-1d", raw=True)
 
     # make sure all the sequences are the same length
     amino_acid_sequences = ["SMART", "MAGIC"]

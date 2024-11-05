@@ -3,7 +3,7 @@ import torch
 
 
 def main():
-    model, data_encoder = metl.get_from_ident("METL-L-2M-3D-GB1")
+    model, data_encoder = metl.get_from_ident("METL-L-2M-3D-GB1", raw=True)
 
     # the GB1 WT sequence
     wt = "MQYKLILNGKTLKGETTTEAVDAATAEKVFKQYANDNGVDGEWTYDDATKTFTVTE"
@@ -33,7 +33,7 @@ def main():
     print(predictions)
 
     # can also use the 1D model which doesn't require a PDB file
-    model, data_encoder = metl.get_from_ident("METL-L-2M-1D-GB1")
+    model, data_encoder = metl.get_from_ident("METL-L-2M-1D-GB1", raw=True)
     variants = ["T17P,T54F",
                 "V28L,F51A",
                 "T17P,V28L,F51A,T54F"]
