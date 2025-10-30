@@ -34,6 +34,9 @@ def reset_parameters_helper(m: nn.Module):
 
 class SequentialWithArgs(nn.Sequential):
     def forward(self, x, **kwargs):
+        if not isinstance(x, torch.Tensor):
+            x = torch.Tensor(x)
+        
         for module in self:
             if isinstance(module, ra.RelativeTransformerEncoder) or isinstance(module, SequentialWithArgs):
                 # for relative transformer encoders, pass in kwargs (pdb_fn)
@@ -42,8 +45,7 @@ class SequentialWithArgs(nn.Sequential):
                 # for all modules, don't pass in kwargs
                 x = module(x)
         return x
-
-
+    
 class PositionalEncoding(nn.Module):
     # originally from https://pytorch.org/tutorials/beginner/transformer_tutorial.html
     # they have since updated their implementation, but it is functionally equivalent

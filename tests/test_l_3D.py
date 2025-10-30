@@ -4,7 +4,7 @@ import metl
 
 def main():
     # this is a 3D RPE model, which requires a PDB file matching the WT sequence
-    model, data_encoder = metl.get_from_uuid(uuid="PEkeRuxb")
+    model, data_encoder = metl.get_from_uuid(uuid="PEkeRuxb", raw=True)
 
     # the GFP wild-type sequence
     wt = "SKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTLVTTLSYGVQCFSRYPDHMKQ" \
