@@ -4,7 +4,7 @@ import metl
 
 def main():
     # "YoQkzoLD" is a METL-L (2M, 1D) [GFP] model that was fine-tuned on 64 examples from the avGFP DMS dataset
-    model, data_encoder = metl.get_from_uuid(uuid="YoQkzoLD")
+    model, data_encoder = metl.get_from_uuid(uuid="YoQkzoLD", raw=True)
 
     # the GFP wild-type sequence
     wt = "SKGEELFTGVVPILVELDGDVNGHKFSVSGEGEGDATYGKLTLKFICTTGKLPVPWPTLVTTLSYGVQCFSRYPDHMKQ" \

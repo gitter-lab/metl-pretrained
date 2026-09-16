@@ -1,6 +1,7 @@
 setuptools
-numpy>=1.23.2
+numpy>=1.23.2,<2
 networkx>=2.6.3
 scipy>=1.9.1
 biopandas>=0.2.7
 torch>=1.11.0
+biopython==1.84
