@@ -1,5 +1,6 @@
-huggingface-hub==0.30.2
-transformers==4.51.3
+huggingface-hub==1.13.0
+transformers==5.17.0
+torch==2.14.0
 numpy>=1.23.2
 networkx>=2.6.3
 scipy>=1.9.1

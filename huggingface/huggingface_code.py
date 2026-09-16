@@ -44,7 +44,8 @@ class METLModel(PreTrainedModel):
         self.model = None
         self.encoder = None
         self.config = config
-        
+        self.post_init()
+
     def forward(self, X, pdb_fn=None):
         if pdb_fn:
             return self.model(X, pdb_fn=pdb_fn)
